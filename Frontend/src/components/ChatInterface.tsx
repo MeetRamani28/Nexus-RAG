@@ -1,13 +1,27 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, Loader2 } from "lucide-react";
+import { Send, Bot, User, Sparkles, Loader2, Trash2 } from "lucide-react";
 import type { ChatMessage, Citation } from "../types";
 import { CitationBadge } from "./CitationBadge";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
+const LOCAL_STORAGE_CHAT_KEY = "nexus_rag_chat_history";
+
 export const ChatInterface: React.FC = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // 1. Initialize state directly from localStorage so it persists on reload
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_CHAT_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (err) {
+        console.error("Failed to parse saved chat history", err);
+      }
+    }
+    return [];
+  });
+
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -19,6 +33,19 @@ export const ChatInterface: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // 2. Automatically save messages to localStorage whenever they update
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(LOCAL_STORAGE_CHAT_KEY, JSON.stringify(messages));
+    }
+  }, [messages]);
+
+  // 3. Clear Chat History handler
+  const handleClearChat = () => {
+    setMessages([]);
+    localStorage.removeItem(LOCAL_STORAGE_CHAT_KEY);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,6 +150,7 @@ export const ChatInterface: React.FC = () => {
 
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-2xl flex flex-col h-[600px] backdrop-blur-md shadow-2xl">
+      {/* Header Bar */}
       <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
         <div className="flex items-center space-x-2.5">
           <div className="p-2 bg-sky-500/10 rounded-lg border border-sky-500/20 text-sky-400">
@@ -137,12 +165,27 @@ export const ChatInterface: React.FC = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2 text-xs text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>SSE Streaming Active</span>
+
+        <div className="flex items-center space-x-3">
+          {messages.length > 0 && (
+            <button
+              onClick={handleClearChat}
+              title="Clear Chat History"
+              className="flex items-center space-x-1 text-xs text-slate-400 hover:text-rose-400 transition-colors p-1.5 rounded-lg hover:bg-slate-800/60 cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Clear Chat</span>
+            </button>
+          )}
+
+          <div className="flex items-center space-x-2 text-xs text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>SSE Streaming Active</span>
+          </div>
         </div>
       </div>
 
+      {/* Chat Messages Body */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-3">
@@ -176,9 +219,11 @@ export const ChatInterface: React.FC = () => {
                 {msg.isStreaming && (
                   <span className="inline-block w-2 h-4 bg-sky-400 animate-pulse ml-1 align-middle" />
                 )}
-                {msg.sender === "assistant" && msg.citations && (
-                  <CitationBadge citations={msg.citations} />
-                )}
+                {msg.sender === "assistant" &&
+                  msg.citations &&
+                  msg.citations.length > 0 && (
+                    <CitationBadge citations={msg.citations} />
+                  )}
               </div>
 
               {msg.sender === "user" && (
@@ -192,6 +237,7 @@ export const ChatInterface: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Chat Input Bar */}
       <form
         onSubmit={handleSubmit}
         className="p-4 border-t border-slate-800 bg-slate-950/50"

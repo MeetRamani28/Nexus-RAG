@@ -7,6 +7,19 @@ export const App: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [ingestedDocCount, setIngestedDocCount] = useState(0);
 
+  // 1. Chat reset કરવા માટેનો સ્ટેટ
+  const [resetKey, setResetKey] = useState(0);
+
+  const handleIngestSuccess = () => {
+    setIngestedDocCount((prev) => prev + 1);
+
+    // 2. નવી PDF અપલોડ થાય ત્યારે LocalStorage માંથી જૂની ચેટ ડિલીટ કરો
+    localStorage.removeItem("nexus_rag_chat_history");
+
+    // 3. ChatInterface ને રી-માઉન્ટ (Reset) કરો
+    setResetKey((prev) => prev + 1);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       {/* Header Bar */}
@@ -39,13 +52,12 @@ export const App: React.FC = () => {
 
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-4">
-          <PdfUploader
-            onIngestSuccess={() => setIngestedDocCount((prev) => prev + 1)}
-          />
+          <PdfUploader onIngestSuccess={handleIngestSuccess} />
         </div>
 
         <div className="lg:col-span-8">
-          <ChatInterface />
+          {/* Key આપવાથી resetKey બદલાતા જ ChatInterface ફ્રેશ રીસેટ થશે */}
+          <ChatInterface key={resetKey} />
         </div>
       </main>
     </div>

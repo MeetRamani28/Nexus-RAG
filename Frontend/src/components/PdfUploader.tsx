@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Upload,
   FileText,
@@ -21,6 +21,20 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({
   const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
   const [successData, setSuccessData] = useState<IngestResponse | null>(null);
+
+  useEffect(() => {
+    const savedIngestData = localStorage.getItem("nexus_rag_ingest_data");
+    if (savedIngestData) {
+      try {
+        const parsed: IngestResponse = JSON.parse(savedIngestData);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSuccessData(parsed);
+        onIngestSuccess(parsed);
+      } catch (err) {
+        console.error("Failed to parse saved document data", err);
+      }
+    }
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -56,6 +70,10 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({
 
       const result: IngestResponse = await response.json();
       setSuccessData(result);
+
+      // 2. સક્સેસફુલ ઇનજેસ્ટ થતાં જ localStorage માં સેવ કરી લો
+      localStorage.setItem("nexus_rag_ingest_data", JSON.stringify(result));
+
       onIngestSuccess(result);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
