@@ -71,7 +71,6 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({
       const result: IngestResponse = await response.json();
       setSuccessData(result);
 
-      // 2. સક્સેસફુલ ઇનજેસ્ટ થતાં જ localStorage માં સેવ કરી લો
       localStorage.setItem("nexus_rag_ingest_data", JSON.stringify(result));
 
       onIngestSuccess(result);

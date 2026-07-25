@@ -9,7 +9,6 @@ const API_BASE_URL =
 const LOCAL_STORAGE_CHAT_KEY = "nexus_rag_chat_history";
 
 export const ChatInterface: React.FC = () => {
-  // 1. Initialize state directly from localStorage so it persists on reload
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const saved = localStorage.getItem(LOCAL_STORAGE_CHAT_KEY);
     if (saved) {
@@ -34,14 +33,12 @@ export const ChatInterface: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  // 2. Automatically save messages to localStorage whenever they update
   useEffect(() => {
     if (messages.length > 0) {
       localStorage.setItem(LOCAL_STORAGE_CHAT_KEY, JSON.stringify(messages));
     }
   }, [messages]);
 
-  // 3. Clear Chat History handler
   const handleClearChat = () => {
     setMessages([]);
     localStorage.removeItem(LOCAL_STORAGE_CHAT_KEY);
@@ -150,7 +147,6 @@ export const ChatInterface: React.FC = () => {
 
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-2xl flex flex-col h-[600px] backdrop-blur-md shadow-2xl">
-      {/* Header Bar */}
       <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
         <div className="flex items-center space-x-2.5">
           <div className="p-2 bg-sky-500/10 rounded-lg border border-sky-500/20 text-sky-400">
@@ -185,7 +181,6 @@ export const ChatInterface: React.FC = () => {
         </div>
       </div>
 
-      {/* Chat Messages Body */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-3">
@@ -237,7 +232,6 @@ export const ChatInterface: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Chat Input Bar */}
       <form
         onSubmit={handleSubmit}
         className="p-4 border-t border-slate-800 bg-slate-950/50"

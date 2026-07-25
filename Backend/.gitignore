@@ -10,3 +10,5 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
+qdrant_storage/
+*.pkl

@@ -16,7 +16,6 @@ load_dotenv()
 
 app = FastAPI(title="Nexus-RAG Backend Engine", version="1.0.0")
 
-# Enable CORS for React Frontend connection
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -41,18 +40,15 @@ async def ingest_pdf(file: UploadFile = File(...)):
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
 
-    # OS-independent temporary file creation
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
         content = await file.read()
         tmp_file.write(content)
         temp_path = tmp_file.name
 
     try:
-        # Load and Split into Parent & Child Chunks
         raw_docs = ingestion_engine.load_pdf(temp_path)
         parent_docs, child_docs = ingestion_engine.create_parent_child_chunks(raw_docs, file.filename)
 
-        # Store in Vector Store & Memory Lookup
         vector_store_instance.store_documents(parent_docs, child_docs)
 
         return DocumentIngestResponse(
@@ -66,7 +62,6 @@ async def ingest_pdf(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process PDF: {str(e)}")
     finally:
-        # Cleanup temporary file from disk
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
@@ -78,7 +73,6 @@ async def stream_query(payload: QueryRequest):
     """
     async def event_generator():
         try:
-            # Correctly map request payload question to initial graph state
             initial_state: dict = {
                 "question": payload.question,
                 "documents": [],
@@ -89,17 +83,14 @@ async def stream_query(payload: QueryRequest):
                 "error": None
             }
 
-            # Invoke LangGraph
             final_state = rag_graph.invoke(initial_state)
 
-            # Stream Citation Metadata Event
             citations_event = {
                 "event": "citations",
                 "data": json.dumps({"citations": final_state.get("citation_sources", [])})
             }
             yield citations_event
 
-            # Stream Word-by-Word Response
             generation_text = final_state.get("generation", "No response generated.")
             for word in generation_text.split(" "):
                 chunk_event = {

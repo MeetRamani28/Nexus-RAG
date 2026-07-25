@@ -7,7 +7,6 @@ from langchain_core.documents import Document
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 
-# Disk storage paths
 STORAGE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "qdrant_storage")
 PARENT_STORE_PATH = os.path.join(STORAGE_DIR, "parent_store.pkl")
 os.makedirs(STORAGE_DIR, exist_ok=True)
@@ -25,10 +24,8 @@ class HybridVectorStore:
             model_kwargs={'device': 'cpu'}
         )
 
-        # 1. Load persisted Parent Documents from Disk if available
         self.parent_store: Dict[str, Document] = self._load_parent_store()
 
-        # 2. Initialize Qdrant Client with local file storage
         self.client = QdrantClient(path=os.path.join(STORAGE_DIR, "qdrant_db"))
         self.vector_db = None
         self._ensure_collection_exists()
@@ -68,7 +65,6 @@ class HybridVectorStore:
         """
         Stores Parent docs in lookup disk-file and embeds Child docs in Qdrant Disk Storage.
         """
-        # Save Parent Documents
         for p_doc in parent_docs:
             parent_id = p_doc.metadata.get("parent_id")
             if parent_id:
@@ -77,7 +73,6 @@ class HybridVectorStore:
 
         self._ensure_collection_exists()
 
-        # Save Child Chunks to Qdrant Local Disk
         self.vector_db = QdrantVectorStore(
             client=self.client,
             collection_name=self.collection_name,

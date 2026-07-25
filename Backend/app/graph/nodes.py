@@ -49,7 +49,6 @@ def rerank_node(state: RAGState) -> Dict[str, Any]:
 
 
 def generate_node(state: RAGState) -> Dict[str, Any]:
-    # Extract query safely
     query = state.get("question", "")
     reranked_docs = state.get("reranked_documents", [])
     

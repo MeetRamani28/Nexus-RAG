@@ -36,7 +36,6 @@ class PDFIngestionEngine:
         parent_docs: List[Document] = []
         child_docs: List[Document] = []
 
-        # Step 1: Generate Parent Chunks
         raw_parents = self.parent_splitter.split_documents(documents)
 
         for p_idx, parent in enumerate(raw_parents):
@@ -52,7 +51,6 @@ class PDFIngestionEngine:
             parent_doc = Document(page_content=parent.page_content, metadata=parent_metadata)
             parent_docs.append(parent_doc)
 
-            # Step 2: Split Parent into Child Chunks
             children = self.child_splitter.split_documents([parent_doc])
             
             for c_idx, child in enumerate(children):
