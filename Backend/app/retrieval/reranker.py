@@ -1,16 +1,11 @@
 import os
 from typing import List
-from langchain_community.document_compressors import CohereRerank
+from langchain_cohere import CohereRerank
 from langchain_core.documents import Document
 
 class RerankEngine:
     """
     Reranks candidate retrieved documents using Cohere Cross-Encoder model.
-    
-    Why Reranking?
-    - Vector DB search yields top 15-20 chunks based purely on distance metrics.
-    - Cross-Encoder evaluates deep context semantics between Query and Document.
-    - Filters top 20 candidates down to top 3-5 high-relevance chunks to prevent LLM hallucinations.
     """
 
     def __init__(self, top_n: int = 4):

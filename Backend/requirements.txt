@@ -17,3 +17,5 @@ qdrant-client
 pypdf
 tiktoken
 langsmith
+langchain-qdrant
+python-multipart

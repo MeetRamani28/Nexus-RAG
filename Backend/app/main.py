@@ -1,6 +1,7 @@
 import os
 import json
 import asyncio
+import tempfile
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
@@ -15,6 +16,7 @@ load_dotenv()
 
 app = FastAPI(title="Nexus-RAG Backend Engine", version="1.0.0")
 
+# Enable CORS for React Frontend connection
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -34,20 +36,23 @@ def read_root():
 async def ingest_pdf(file: UploadFile = File(...)):
     """
     Endpoint to upload and process PDF documents with Parent-Child chunking.
+    Uses tempfile module for Windows and Linux compatibility.
     """
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
 
-    temp_path = f"/tmp/{file.filename}"
-    os.makedirs("/tmp", exist_ok=True)
+    # OS-independent temporary file creation
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+        content = await file.read()
+        tmp_file.write(content)
+        temp_path = tmp_file.name
 
     try:
-        with open(temp_path, "wb") as f:
-            f.write(await file.read())
-
+        # Load and Split into Parent & Child Chunks
         raw_docs = ingestion_engine.load_pdf(temp_path)
         parent_docs, child_docs = ingestion_engine.create_parent_child_chunks(raw_docs, file.filename)
 
+        # Store in Vector Store & Memory Lookup
         vector_store_instance.store_documents(parent_docs, child_docs)
 
         return DocumentIngestResponse(
@@ -61,6 +66,7 @@ async def ingest_pdf(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process PDF: {str(e)}")
     finally:
+        # Cleanup temporary file from disk
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
@@ -71,32 +77,44 @@ async def stream_query(payload: QueryRequest):
     SSE Streaming Endpoint: Executes LangGraph workflow and streams final response tokens.
     """
     async def event_generator():
-        initial_state = {
-            "question": payload.question,
-            "documents": [],
-            "child_documents": [],
-            "reranked_documents": [],
-            "generation": "",
-            "citation_sources": [],
-            "error": None
-        }
-
-        final_state = rag_graph.invoke(initial_state)
-
-        citations_event = {
-            "event": "citations",
-            "data": json.dumps({"citations": final_state.get("citation_sources", [])})
-        }
-        yield citations_event
-
-        generation_text = final_state.get("generation", "")
-        for word in generation_text.split(" "):
-            chunk_event = {
-                "event": "message",
-                "data": json.dumps({"token": word + " "})
+        try:
+            # Correctly map request payload question to initial graph state
+            initial_state: dict = {
+                "question": payload.question,
+                "documents": [],
+                "child_documents": [],
+                "reranked_documents": [],
+                "generation": "",
+                "citation_sources": [],
+                "error": None
             }
-            yield chunk_event
-            await asyncio.sleep(0.03)
+
+            # Invoke LangGraph
+            final_state = rag_graph.invoke(initial_state)
+
+            # Stream Citation Metadata Event
+            citations_event = {
+                "event": "citations",
+                "data": json.dumps({"citations": final_state.get("citation_sources", [])})
+            }
+            yield citations_event
+
+            # Stream Word-by-Word Response
+            generation_text = final_state.get("generation", "No response generated.")
+            for word in generation_text.split(" "):
+                chunk_event = {
+                    "event": "message",
+                    "data": json.dumps({"token": word + " "})
+                }
+                yield chunk_event
+                await asyncio.sleep(0.02)
+
+        except Exception as e:
+            error_event = {
+                "event": "message",
+                "data": json.dumps({"token": f"\n\n[System Error]: {str(e)}"})
+            }
+            yield error_event
 
         yield {"event": "done", "data": "[DONE]"}
 

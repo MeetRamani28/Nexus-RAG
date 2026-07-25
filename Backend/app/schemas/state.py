@@ -15,7 +15,7 @@ class RAGState(TypedDict):
         citation_sources: Source metadata (filename, page numbers, chunk IDs).
         error: Optional error context string if any step fails.
     """
-    questions: str
+    question: str
     documents: List[Document]
     child_documents: List[Document]
     reranked_documents: List[Document]

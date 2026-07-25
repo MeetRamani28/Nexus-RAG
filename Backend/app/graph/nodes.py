@@ -10,28 +10,35 @@ vector_store_instance = HybridVectorStore()
 reranker_instance = RerankEngine(top_n=4)
 
 def retrieve_node(state: RAGState) -> Dict[str, Any]:
-    """
-    Node 1: Retrieves candidate parent documents based on child vector search.
-    """
-    query = state["question"]
-    retrieved_parents = vector_store_instance.search_child_and_fetch_parents(query, top_k=15)
-    return {"documents": retrieved_parents}
+    query = state.get("question", "")
+    try:
+        retrieved_parents = vector_store_instance.search_child_and_fetch_parents(query, top_k=10)
+        return {"documents": retrieved_parents}
+    except Exception as e:
+        print(f"[Retrieve Error]: {e}")
+        return {"documents": []}
 
 
 def rerank_node(state: RAGState) -> Dict[str, Any]:
-    """
-    Node 2: Filters and re-orders candidate documents using Cohere Cross-Encoder.
-    """
-    query = state["question"]
+    query = state.get("question", "")
     candidate_docs = state.get("documents", [])
     
-    reranked_docs = reranker_instance.rerank_documents(query, candidate_docs)
-    
+    if not candidate_docs:
+        return {"reranked_documents": [], "citation_sources": []}
+
+    try:
+        reranked_docs = reranker_instance.rerank_documents(query, candidate_docs)
+        if not reranked_docs:
+            reranked_docs = candidate_docs[:4]
+    except Exception as e:
+        print(f"[Rerank Fallback]: {e}")
+        reranked_docs = candidate_docs[:4]
+
     citations = []
     for doc in reranked_docs:
         citations.append({
             "source_file": doc.metadata.get("source_file", "Unknown"),
-            "page_number": doc.metadata.get("page", 0) + 1,
+            "page_number": doc.metadata.get("page", 1),
             "content_snippet": doc.page_content[:150] + "..."
         })
 
@@ -42,33 +49,40 @@ def rerank_node(state: RAGState) -> Dict[str, Any]:
 
 
 def generate_node(state: RAGState) -> Dict[str, Any]:
-    """
-    Node 3: Generates final synthesized answer using Groq LLM with context citations.
-    """
-    query = state["question"]
+    # Extract query safely
+    query = state.get("question", "")
     reranked_docs = state.get("reranked_documents", [])
     
+    if not reranked_docs:
+        reranked_docs = state.get("documents", [])
+
+    if not reranked_docs:
+        return {"generation": "No relevant context was found in the ingested documents to answer your query."}
+
     context_str = "\n\n---\n\n".join(
-        [f"[Source: {doc.metadata.get('source_file')}, Page: {doc.metadata.get('page', 0)+1}]\n{doc.page_content}" 
+        [f"[Source: {doc.metadata.get('source_file')}, Page: {doc.metadata.get('page', 1)}]\n{doc.page_content}" 
          for doc in reranked_docs]
     )
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are an Enterprise Document Intelligence AI (Nexus-RAG). "
-                   "Answer the user's question accurately based strictly on the provided context below. "
-                   "If the context does not contain enough information, state clearly that you don't know.\n\n"
+        ("system", "You are an expert Enterprise Financial Document Assistant (Nexus-RAG).\n"
+                   "Answer the user's query accurately using ONLY the information provided in the Context below.\n"
+                   "Extract specific monetary values, figures, or dates clearly.\n\n"
                    "Context:\n{context}"),
         ("human", "{question}")
     ])
 
     groq_api_key = os.getenv("GROQ_API_KEY", "")
-    llm = ChatGroq(
-        temperature=0.1,
-        model_name="llama-3.3-70b-versatile",
-        groq_api_key=groq_api_key
-    )
-
-    chain = prompt | llm
-    response = chain.invoke({"context": context_str, "question": query})
-
-    return {"generation": response.content}
+    
+    try:
+        llm = ChatGroq(
+            temperature=0.1,
+            model_name="llama-3.3-70b-versatile",
+            groq_api_key=groq_api_key
+        )
+        chain = prompt | llm
+        response = chain.invoke({"context": context_str, "question": query})
+        return {"generation": str(response.content)}
+    except Exception as e:
+        print(f"[Groq LLM Error]: {e}")
+        return {"generation": f"Error calling Groq API: {str(e)}"}
