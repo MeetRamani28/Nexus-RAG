@@ -146,7 +146,7 @@ export const ChatInterface: React.FC = () => {
   };
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl flex flex-col h-[600px] backdrop-blur-md shadow-2xl">
+    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl flex flex-col h-[calc(100vh-7rem)] backdrop-blur-md shadow-2xl w-full">
       <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
         <div className="flex items-center space-x-2.5">
           <div className="p-2 bg-sky-500/10 rounded-lg border border-sky-500/20 text-sky-400">
@@ -181,7 +181,7 @@ export const ChatInterface: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-3">
             <Sparkles className="w-10 h-10 text-slate-600" />
