@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "nexus_rag.db")
 DB_PATH = os.path.abspath(DB_PATH)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+DATABASE_URL = os.getenv("DATABASE_URL", os.getenv("POSTGRES_DB_URL", ""))
 # Fallback to SQLite if not provided
 if not DATABASE_URL:
     DATABASE_URL = f"sqlite:///{DB_PATH}"
