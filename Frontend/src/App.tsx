@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Database, Zap, ShieldCheck, PanelLeftClose, PanelLeftOpen, Layers, Menu, X, LogOut, User
+  Database, Zap, ShieldCheck, PanelLeftClose, PanelLeftOpen, Layers, Menu, X
 } from "lucide-react";
 import { Sidebar } from "./components/Sidebar";
 import { ChatInterface } from "./components/ChatInterface";
