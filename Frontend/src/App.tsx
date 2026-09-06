@@ -236,6 +236,7 @@ const MainApp: React.FC = () => {
             conversationId={activeConversationId}
             onDocUploaded={fetchDocCount}
             onConversationUpdated={fetchConversations}
+            onNewChat={handleNewChat}
             fetchAuth={fetchAuth}
           />
         </main>

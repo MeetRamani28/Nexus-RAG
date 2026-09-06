@@ -30,6 +30,7 @@ interface Props {
   conversationId: string | null;
   onDocUploaded: () => void;
   onConversationUpdated?: () => void;
+  onNewChat?: () => void;
   fetchAuth: (url: string, options?: RequestInit) => Promise<Response>;
 }
 
@@ -116,6 +117,7 @@ export const ChatInterface: React.FC<Props> = ({
   conversationId,
   onDocUploaded,
   onConversationUpdated,
+  onNewChat,
   fetchAuth,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -300,8 +302,8 @@ export const ChatInterface: React.FC<Props> = ({
     setIsStreaming(true);
     setPipeline("retrieving");
 
-    setTimeout(() => setPipeline("reranking"), 900);
-    setTimeout(() => setPipeline("generating"), 1800);
+    const t1 = setTimeout(() => setPipeline((p) => p !== "idle" && p !== "done" ? "reranking" : p), 900);
+    const t2 = setTimeout(() => setPipeline((p) => p !== "idle" && p !== "done" ? "generating" : p), 1800);
 
     try {
       const res = await fetchAuth(`${API_BASE_URL}/api/v1/query/stream`, {
@@ -392,9 +394,16 @@ export const ChatInterface: React.FC<Props> = ({
           <BrainCircuit className="w-8 h-8 text-blue-400" />
         </div>
         <h2 className="text-2xl font-bold text-slate-100 mb-2">Nexus Intelligence Engine</h2>
-        <p className="text-slate-400 text-xs max-w-md leading-relaxed">
-          Select or create a conversation from the sidebar to analyze PDF documents with Qdrant Vector Search & Cohere Reranking.
+        <p className="text-slate-400 text-xs max-w-md leading-relaxed mb-6">
+          Select a conversation from the sidebar or start a new chat to analyze PDF documents with Qdrant Vector Search & Cohere Reranking.
         </p>
+        <button
+          onClick={onNewChat}
+          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-500/25 transition-all flex items-center gap-2 cursor-pointer group"
+        >
+          <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
+          Start New Chat
+        </button>
       </div>
     );
   }
