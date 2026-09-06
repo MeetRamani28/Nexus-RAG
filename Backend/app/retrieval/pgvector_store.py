@@ -1,6 +1,6 @@
 import os
 from typing import List
-from langchain_huggingface import HuggingFaceEmbeddings
+from app.core.embeddings import get_embeddings
 from langchain_core.documents import Document
 from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import sessionmaker
@@ -19,10 +19,7 @@ class PgVectorStore(VectorStoreInterface):
             "POSTGRES_DB_URL", "postgresql+psycopg://postgres:postgres@localhost:5432/nexus_rag"
         )
         
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name="all-MiniLM-L6-v2",
-            model_kwargs={'device': 'cpu'}
-        )
+        self.embeddings = get_embeddings()
 
         self.engine = create_engine(self.db_url, echo=False)
         self.SessionLocal = sessionmaker(bind=self.engine)
