@@ -597,7 +597,7 @@ export const ChatInterface: React.FC<Props> = ({
       </div>
 
       {/* ── Prominent Input Bar (Antigravity / Gemini Style) ──────────────── */}
-      <div className="shrink-0 px-4 pb-4 pt-2 z-20">
+      <div className="shrink-0 px-4 pb-6 sm:pb-4 pt-2 z-20 bg-[#050811]">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
           {/* Lock Notice if no document is present */}
           {!hasDocument && (

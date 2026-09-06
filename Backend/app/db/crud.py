@@ -101,8 +101,8 @@ def get_messages(db: Session, conversation_id: str) -> List[Message]:
 # IngestedDocument CRUD
 # ─────────────────────────────────────────────
 
-def doc_exists_by_hash(db: Session, file_hash: str) -> Optional[IngestedDocument]:
-    return db.query(IngestedDocument).filter(IngestedDocument.file_hash == file_hash).first()
+def doc_exists_by_hash(db: Session, file_hash: str, user_id: str) -> Optional[IngestedDocument]:
+    return db.query(IngestedDocument).filter(IngestedDocument.file_hash == file_hash, IngestedDocument.user_id == user_id).first()
 
 
 def save_ingested_doc(

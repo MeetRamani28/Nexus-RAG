@@ -278,7 +278,7 @@ async def ingest_pdf(
         crud.update_conversation_source_file(db, conversation_id, file.filename, user_id)
 
     # Duplicate detection
-    existing = crud.doc_exists_by_hash(db, file_hash)
+    existing = crud.doc_exists_by_hash(db, file_hash, user_id)
     if existing:
         return DocumentIngestResponse(
             status="duplicate",
