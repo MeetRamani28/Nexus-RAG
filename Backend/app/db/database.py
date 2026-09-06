@@ -11,11 +11,13 @@ DATABASE_URL = os.getenv("DATABASE_URL", os.getenv("POSTGRES_DB_URL", ""))
 if not DATABASE_URL:
     DATABASE_URL = f"sqlite:///{DB_PATH}"
 
-print(f"[DB Setup]: DATABASE_URL starts with: {DATABASE_URL.split('://')[0]}://***")
-
-# Fix Neon Postgres URL if it starts with postgres:// instead of postgresql://
+# Force the use of psycopg3 driver for SQLAlchemy
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+
+print(f"[DB Setup]: DATABASE_URL starts with: {DATABASE_URL.split('://')[0]}://***")
 
 connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 
