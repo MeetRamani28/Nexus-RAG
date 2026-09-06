@@ -23,4 +23,5 @@ psycopg[binary]
 pgvector
 redis
 slowapi
-aiofilesPyJWT
+aiofiles
+PyJWT
