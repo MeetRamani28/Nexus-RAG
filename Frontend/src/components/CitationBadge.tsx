@@ -1,45 +1,54 @@
-import React from "react";
-import { BookOpen } from "lucide-react";
+﻿import React, { useState } from "react";
+import { FileText, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import type { Citation } from "../types";
 
-interface CitationBadgeProps {
-  citations: Citation[];
-}
+interface Props { citations: Citation[]; }
 
-export const CitationBadge: React.FC<CitationBadgeProps> = ({ citations }) => {
+export const CitationBadge: React.FC<Props> = ({ citations }) => {
+  const [expanded, setExpanded] = useState(false);
   if (!citations || citations.length === 0) return null;
 
   return (
-    <div className="mt-3 pt-3 border-t border-slate-800/80">
-      <div className="flex items-center space-x-1.5 text-xs text-sky-400 font-medium mb-2">
-        <BookOpen className="w-3.5 h-3.5" />
-        <span>Retrieved Context Sources:</span>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {citations.map((cite, idx) => (
-          <div
-            key={idx}
-            className="group relative bg-slate-900/90 border border-slate-800 hover:border-sky-500/40 rounded-lg px-2.5 py-1 text-xs text-slate-300 transition-all cursor-pointer"
-          >
-            <span className="font-semibold text-sky-400">
-              {cite.source_file}
-            </span>
-            <span className="text-slate-500 ml-1">
-              (Pg. {cite.page_number})
-            </span>
+    <div className="mt-4 pt-3 border-t border-slate-800/60">
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-300 transition-colors group mb-2"
+      >
+        <div className="flex items-center gap-1.5">
+          <FileText className="w-3.5 h-3.5 text-blue-400" />
+          <span className="font-medium text-slate-400">
+            {citations.length} source{citations.length > 1 ? "s" : ""} retrieved
+          </span>
+        </div>
+        {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+      </button>
 
-            {/* Hover Tooltip showing content snippet */}
-            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-64 p-2.5 bg-slate-900 border border-slate-700 text-slate-300 text-[11px] rounded-lg shadow-2xl z-50 pointer-events-none">
-              <p className="font-semibold text-sky-400 mb-1">
-                {cite.source_file} - Page {cite.page_number}
-              </p>
-              <p className="line-clamp-3 text-slate-400 italic">
-                "{cite.content_snippet}"
-              </p>
+      {expanded && (
+        <div className="space-y-2 mt-2">
+          {citations.map((cite, idx) => (
+            <div
+              key={idx}
+              className="flex items-start gap-3 bg-slate-800/40 border border-slate-700/50 rounded-lg px-3 py-2.5 hover:border-blue-500/30 transition-all group"
+            >
+              <span className="shrink-0 w-5 h-5 bg-blue-500/10 border border-blue-500/20 rounded text-blue-400 text-[10px] font-bold flex items-center justify-center mt-0.5">
+                {idx + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-semibold text-slate-300 truncate">{cite.source_file}</span>
+                  <span className="shrink-0 text-[10px] text-slate-500 bg-slate-700/50 px-1.5 py-0.5 rounded">
+                    pg. {cite.page_number}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 line-clamp-2 italic leading-relaxed">
+                  &ldquo;{cite.content_snippet}&rdquo;
+                </p>
+              </div>
+              <ExternalLink className="w-3 h-3 text-slate-600 group-hover:text-blue-400 transition-colors shrink-0 mt-1" />
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

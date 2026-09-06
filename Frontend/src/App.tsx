@@ -1,116 +1,183 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
-  Layers,
-  ShieldCheck,
-  Cpu,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Database,
-  Zap,
+  Database, Zap, ShieldCheck, PanelLeftClose, PanelLeftOpen, Layers
 } from "lucide-react";
-import { PdfUploader } from "./components/PdfUploader";
+import { Sidebar } from "./components/Sidebar";
 import { ChatInterface } from "./components/ChatInterface";
-import type { SystemInfoResponse } from "./types";
+import { DocumentModal } from "./components/DocumentModal";
+import type { ConversationListItem, SystemInfoResponse } from "./types";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 export const App: React.FC = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [resetKey, setResetKey] = useState(0);
+  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [docModalOpen, setDocModalOpen] = useState(false);
+  const [docCount, setDocCount] = useState(0);
 
+  // Fetch System Info
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/v1/system/info`)
-      .then((res) => res.json())
-      .then((data: SystemInfoResponse) => setSystemInfo(data))
-      .catch((err) => console.error("Failed to fetch system info:", err));
+      .then((r) => r.json())
+      .then((d: SystemInfoResponse) => setSystemInfo(d))
+      .catch(() => {});
   }, []);
 
-  const handleIngestSuccess = () => {
-    localStorage.removeItem("nexus_rag_chat_history");
-    setResetKey((prev) => prev + 1);
+  // Fetch Document Count
+  const fetchDocCount = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/documents`);
+      if (res.ok) {
+        const docs = await res.json();
+        setDocCount(docs.length);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDocCount();
+  }, [fetchDocCount]);
+
+  // Fetch Conversation List
+  const fetchConversations = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/conversations`);
+      if (res.ok) {
+        const list: ConversationListItem[] = await res.json();
+        setConversations(list);
+        if (list.length > 0 && !activeConversationId) {
+          setActiveConversationId(list[0].id);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  // Create New Chat
+  const handleNewChat = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/conversations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "New Conversation" }),
+      });
+      const newConv: ConversationListItem = await res.json();
+      setConversations((prev) => [newConv, ...prev]);
+      setActiveConversationId(newConv.id);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleDeleteConversation = async (id: string) => {
+    try {
+      await fetch(`${API_BASE_URL}/api/v1/conversations/${id}`, { method: "DELETE" });
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      if (activeConversationId === id) {
+        const remaining = conversations.filter((c) => c.id !== id);
+        setActiveConversationId(remaining.length > 0 ? remaining[0].id : null);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleRenameConversation = (id: string, title: string) => {
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, title } : c))
+    );
   };
 
   return (
-    <div className="min-h-screen no-scrollbar bg-slate-950 text-slate-100 flex flex-col font-sans">
-      <header className="h-16 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md px-4 md:px-6 flex items-center justify-between sticky top-0 z-20">
-        <div className="flex items-center space-x-3">
+    <div className="flex flex-col h-screen w-screen bg-[#050811] text-slate-100 font-sans overflow-hidden">
+      {/* ── Top Header ─────────────────────────────────────────── */}
+      <header className="h-14 border-b border-slate-800/60 bg-[#0a0f1c]/80 backdrop-blur-xl px-4 flex items-center justify-between shrink-0 z-20">
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setIsSidebarOpen((prev) => !prev)}
-            title={isSidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
-            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-all cursor-pointer"
+            onClick={() => setSidebarOpen((v) => !v)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors"
+            title={sidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
           >
-            {isSidebarOpen ? (
-              <PanelLeftClose className="w-5 h-5" />
-            ) : (
-              <PanelLeftOpen className="w-5 h-5 text-sky-400" />
-            )}
+            {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4 text-blue-400" />}
           </button>
 
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 bg-sky-500/10 rounded-xl border border-sky-500/20 text-sky-400">
-              <Layers className="w-6 h-6" />
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+              <Layers className="w-4 h-4" />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight text-slate-50 flex items-center gap-2">
-                Nexus-RAG
-              </h1>
-              <p className="text-[10px] text-slate-400 hidden sm:block">
-                Enterprise Document Intelligence Engine
-              </p>
+              <h1 className="text-sm font-bold tracking-tight text-slate-100 leading-none">Nexus-RAG</h1>
+              <p className="text-[10px] text-slate-400 leading-none mt-0.5 hidden sm:block">Agentic Document Intelligence</p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 sm:space-x-3 text-xs">
-          <div className="flex items-center space-x-1.5 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-300">
-            <Cpu className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-            <span className="hidden md:inline">Groq</span>
-            <span className="text-slate-400 font-mono text-[11px]">
-              {systemInfo?.active_llm_model || "Loading..."}
-            </span>
+        {/* System Badges */}
+        <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800/80 px-2.5 py-1 rounded-lg text-slate-300">
+            <Database className="w-3.5 h-3.5 text-violet-400" />
+            <span className="text-[11px] font-semibold uppercase text-slate-400">{systemInfo?.vector_provider ?? "QDRANT"}</span>
           </div>
 
-          <div className="flex items-center space-x-1.5 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-300">
-            <Database className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            <span className="hidden md:inline">Vector DB</span>
-            <span className="text-slate-400 uppercase text-[11px] font-semibold">
-              {systemInfo?.vector_provider || "QDRANT"}
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-1.5 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-300">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span className="hidden md:inline">Cohere</span>
-            <span className="text-slate-400">Rerank v3</span>
+          <div className="hidden md:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800/80 px-2.5 py-1 rounded-lg text-slate-300">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-[11px] text-slate-400">Cohere Rerank</span>
           </div>
 
           {systemInfo?.hyde_enabled && (
-            <div className="flex items-center space-x-1.5 bg-slate-900/80 border border-amber-500/30 px-3 py-1.5 rounded-xl text-slate-300">
-              <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="hidden md:inline text-amber-400 text-[11px] font-semibold">HyDE</span>
-              <span className="text-slate-400 text-[11px]">ON</span>
+            <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-lg">
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-[11px] text-amber-400 font-semibold">HyDE Active</span>
             </div>
           )}
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden p-4 md:p-6 gap-6 max-w-[1800px] w-full mx-auto">
+      {/* ── Body Layout ────────────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
         <aside
-          className={`transition-all duration-300 ease-in-out shrink-0 flex flex-col ${
-            isSidebarOpen
-              ? "w-full lg:w-80 opacity-100"
-              : "w-0 lg:w-0 opacity-0 overflow-hidden pointer-events-none"
+          className={`shrink-0 transition-all duration-300 ease-in-out overflow-hidden z-10 ${
+            sidebarOpen ? "w-64" : "w-0"
           }`}
         >
-          <PdfUploader onIngestSuccess={handleIngestSuccess} />
+          <Sidebar
+            conversations={conversations}
+            activeId={activeConversationId}
+            docCount={docCount}
+            onNewChat={handleNewChat}
+            onSelect={(id) => setActiveConversationId(id)}
+            onDelete={handleDeleteConversation}
+            onRename={handleRenameConversation}
+            onOpenDocs={() => setDocModalOpen(true)}
+          />
         </aside>
 
-        <main className="flex-1 min-w-0 flex flex-col transition-all duration-300">
-          <ChatInterface key={resetKey} />
+        {/* Main Chat Interface */}
+        <main className="flex-1 min-w-0 bg-[#050811] flex flex-col h-full overflow-hidden">
+          <ChatInterface
+            conversationId={activeConversationId}
+            onDocUploaded={fetchDocCount}
+            onConversationUpdated={fetchConversations}
+          />
         </main>
       </div>
+
+      {/* Document Modal */}
+      <DocumentModal
+        isOpen={docModalOpen}
+        onClose={() => setDocModalOpen(false)}
+        onDocsChanged={fetchDocCount}
+      />
     </div>
   );
 };

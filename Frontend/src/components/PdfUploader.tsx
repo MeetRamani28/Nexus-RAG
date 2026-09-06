@@ -1,47 +1,45 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect, useCallback } from "react";
 import {
-  Upload,
-  FileText,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
+  Upload, FileText, CheckCircle2, AlertCircle, Loader2, Trash2, RefreshCw,
 } from "lucide-react";
-import type { IngestResponse } from "../types";
+import type { IngestResponse, IngestedDocument } from "../types";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 interface PdfUploaderProps {
   onIngestSuccess: (data: IngestResponse) => void;
 }
 
-export const PdfUploader: React.FC<PdfUploaderProps> = ({
-  onIngestSuccess,
-}) => {
+export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-  const [successData, setSuccessData] = useState<IngestResponse | null>(null);
+  const [lastResult, setLastResult] = useState<IngestResponse | null>(null);
+  const [documents, setDocuments] = useState<IngestedDocument[]>([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [deletingFile, setDeletingFile] = useState<string | null>(null);
 
-  useEffect(() => {
-    const savedIngestData = localStorage.getItem("nexus_rag_ingest_data");
-    if (savedIngestData) {
-      try {
-        const parsed: IngestResponse = JSON.parse(savedIngestData);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setSuccessData(parsed);
-        onIngestSuccess(parsed);
-      } catch (err) {
-        console.error("Failed to parse saved document data", err);
-      }
+  const fetchDocuments = useCallback(async () => {
+    setDocsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/documents`);
+      if (res.ok) setDocuments(await res.json());
+    } catch {
+      // silently fail
+    } finally {
+      setDocsLoading(false);
     }
   }, []);
 
+  useEffect(() => { fetchDocuments(); }, [fetchDocuments]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
+    if (e.target.files?.[0]) {
       const selected = e.target.files[0];
       if (selected.type === "application/pdf") {
         setFile(selected);
         setError(null);
+        setLastResult(null);
       } else {
         setError("Please select a valid PDF file.");
         setFile(null);
@@ -49,107 +47,156 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({
     }
   };
 
+  const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    const dropped = e.dataTransfer.files[0];
+    if (dropped?.type === "application/pdf") {
+      setFile(dropped);
+      setError(null);
+      setLastResult(null);
+    } else {
+      setError("Only PDF files are supported.");
+    }
+  };
+
   const handleUpload = async () => {
     if (!file) return;
-
     setLoading(true);
     setError(null);
-
     const formData = new FormData();
     formData.append("file", file);
-
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/ingest`, {
         method: "POST",
         body: formData,
       });
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
-
+      if (!response.ok) throw new Error(`Upload failed: ${response.statusText}`);
       const result: IngestResponse = await response.json();
-      setSuccessData(result);
-
-      localStorage.setItem("nexus_rag_ingest_data", JSON.stringify(result));
-
-      onIngestSuccess(result);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      setError(err.message || "Error processing document");
+      setLastResult(result);
+      if (!result.duplicate) {
+        onIngestSuccess(result);
+        await fetchDocuments();
+      }
+      setFile(null);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error processing document");
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-xl">
-      <div className="flex items-center space-x-3 mb-4">
-        <div className="p-2 bg-sky-500/10 rounded-lg border border-sky-500/20 text-sky-400">
-          <Upload className="w-5 h-5" />
-        </div>
-        <h2 className="text-lg font-semibold text-slate-100">
-          Document Ingestion
-        </h2>
-      </div>
+  const handleDelete = async (filename: string) => {
+    setDeletingFile(filename);
+    try {
+      await fetch(`${API_BASE_URL}/api/v1/documents/${encodeURIComponent(filename)}`, {
+        method: "DELETE",
+      });
+      setDocuments((prev) => prev.filter((d) => d.filename !== filename));
+    } catch {
+      // silently ignore
+    } finally {
+      setDeletingFile(null);
+    }
+  };
 
-      <div className="space-y-4">
-        <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-sky-500/50 rounded-xl p-6 cursor-pointer transition-colors bg-slate-950/40">
-          <FileText className="w-8 h-8 text-slate-400 mb-2" />
-          <span className="text-sm font-medium text-slate-300">
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Upload area */}
+      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 backdrop-blur-md shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-1.5 bg-sky-500/10 rounded-lg border border-sky-500/20 text-sky-400">
+              <Upload className="w-4 h-4" />
+            </div>
+            <h2 className="text-sm font-semibold text-slate-100">Upload PDF</h2>
+          </div>
+        </div>
+
+        <label
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()}
+          className="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-sky-500/50 rounded-xl p-5 cursor-pointer transition-colors bg-slate-950/40"
+        >
+          <FileText className="w-7 h-7 text-slate-400 mb-2" />
+          <span className="text-sm font-medium text-slate-300 text-center">
             {file ? file.name : "Click or drag PDF here"}
           </span>
-          <span className="text-xs text-slate-500 mt-1">
-            Supports multi-page financial/technical PDFs
-          </span>
-          <input
-            type="file"
-            accept=".pdf"
-            className="hidden"
-            onChange={handleFileChange}
-          />
+          <span className="text-xs text-slate-500 mt-1">Multi-page financial & technical PDFs</span>
+          <input type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
         </label>
 
         {error && (
-          <div className="flex items-center space-x-2 text-rose-400 text-xs bg-rose-500/10 p-3 rounded-lg border border-rose-500/20">
+          <div className="mt-3 flex items-center space-x-2 text-rose-400 text-xs bg-rose-500/10 p-3 rounded-lg border border-rose-500/20">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        {successData && (
-          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-xs text-emerald-300 space-y-1">
+        {lastResult && (
+          <div className={`mt-3 rounded-xl p-3 text-xs border space-y-1 ${lastResult.duplicate ? "bg-amber-500/10 border-amber-500/20 text-amber-300" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"}`}>
             <div className="flex items-center space-x-1.5 font-medium">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>{successData.filename} Processed!</span>
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{lastResult.duplicate ? "Already Ingested" : `${lastResult.filename} Processed!`}</span>
             </div>
-            <div className="text-slate-400 pl-5">
-              Parents:{" "}
-              <strong className="text-slate-200">
-                {successData.parent_chunks_created}
-              </strong>{" "}
-              | Children:{" "}
-              <strong className="text-slate-200">
-                {successData.child_chunks_created}
-              </strong>
-            </div>
+            {!lastResult.duplicate && (
+              <div className="text-slate-400 pl-5">
+                Parents: <strong className="text-slate-200">{lastResult.parent_chunks_created}</strong> | Children: <strong className="text-slate-200">{lastResult.child_chunks_created}</strong>
+              </div>
+            )}
+            {lastResult.duplicate && <p className="text-slate-400 pl-5">{lastResult.message}</p>}
           </div>
         )}
 
         <button
           onClick={handleUpload}
           disabled={!file || loading}
-          className="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-800 disabled:text-slate-500 text-slate-100 rounded-xl font-medium text-sm transition-all flex items-center justify-center space-x-2 shadow-lg shadow-sky-900/20 cursor-pointer disabled:cursor-not-allowed"
+          className="mt-3 w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-800 disabled:text-slate-500 text-slate-100 rounded-xl font-medium text-sm transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed"
         >
           {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Ingesting & Indexing...</span>
-            </>
+            <><Loader2 className="w-4 h-4 animate-spin" /><span>Ingesting...</span></>
           ) : (
             <span>Process & Embed PDF</span>
           )}
         </button>
+      </div>
+
+      {/* Ingested documents list */}
+      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 backdrop-blur-md shadow-xl">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-slate-100">Ingested Documents</h2>
+          <button onClick={fetchDocuments} className="text-slate-500 hover:text-slate-300 transition-colors" title="Refresh">
+            <RefreshCw className={`w-3.5 h-3.5 ${docsLoading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+
+        {documents.length === 0 ? (
+          <p className="text-xs text-slate-500 text-center py-3">No documents ingested yet.</p>
+        ) : (
+          <div className="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar">
+            {documents.map((doc) => (
+              <div key={doc.id} className="flex items-center justify-between bg-slate-800/50 rounded-lg px-3 py-2 group">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-slate-200 truncate" title={doc.filename}>{doc.filename}</p>
+                    <p className="text-[10px] text-slate-500">{doc.parent_chunks}P · {doc.child_chunks}C chunks</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDelete(doc.filename)}
+                  disabled={deletingFile === doc.filename}
+                  className="shrink-0 ml-2 text-slate-600 hover:text-rose-400 transition-colors disabled:opacity-50"
+                  title="Remove document"
+                >
+                  {deletingFile === doc.filename
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <Trash2 className="w-3.5 h-3.5" />
+                  }
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

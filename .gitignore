@@ -1,10 +1,15 @@
-﻿# ========================
+# ========================
 # SECRET & ENVIRONMENT
 # ========================
 .env
 *.env
 .env.local
 .env.*.local
+
+# SQLite database (auto-created at runtime)
+*.db
+*.db-shm
+*.db-wal
 
 # ========================
 # PYTHON
@@ -78,3 +83,6 @@ temp/
 # (remove if you want to commit these)
 # ========================
 sample_financial_report.pdf
+tech_company_annual_report_2025.pdf
+generate_sample_pdf.py
+generate_test_pdf.py

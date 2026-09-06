@@ -61,3 +61,18 @@ Thumbs.db
 logs/
 tmp/
 temp/
+
+# ========================
+# SQLITE DB
+# ========================
+*.db
+*.db-shm
+*.db-wal
+
+# ========================
+# TEST / SAMPLE FILES
+# ========================
+generate_sample_pdf.py
+generate_test_pdf.py
+sample_financial_report.pdf
+tech_company_annual_report_2025.pdf

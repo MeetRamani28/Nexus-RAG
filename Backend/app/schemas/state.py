@@ -16,6 +16,8 @@ class RAGState(TypedDict):
         error: Optional error context string if any step fails.
     """
     question: str
+    model: Optional[str]
+    source_file: Optional[str]
     documents: List[Document]
     child_documents: List[Document]
     reranked_documents: List[Document]

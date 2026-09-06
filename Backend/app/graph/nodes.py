@@ -14,9 +14,12 @@ hyde_engine = HyDEEngine()
 
 def retrieve_node(state: RAGState) -> Dict[str, Any]:
     query = state.get("question", "")
+    source_file = state.get("source_file")
     try:
         search_query = hyde_engine.generate_hypothetical_document(query)
-        retrieved_parents = vector_store_instance.search_child_and_fetch_parents(search_query, top_k=10)
+        retrieved_parents = vector_store_instance.search_child_and_fetch_parents(
+            search_query, top_k=10, source_file=source_file
+        )
         return {"documents": retrieved_parents}
     except Exception as e:
         print(f"[Retrieve Error]: {e}")
@@ -81,7 +84,7 @@ def generate_node(state: RAGState) -> Dict[str, Any]:
     ])
 
     groq_api_key = os.getenv("GROQ_API_KEY", "")
-    active_model = get_active_llm_model_name()
+    active_model = state.get("model") or get_active_llm_model_name()
     
     try:
         llm = ChatGroq(
