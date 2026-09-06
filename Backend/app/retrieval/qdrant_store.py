@@ -20,7 +20,7 @@ class QdrantVectorStore(VectorStoreInterface):
     Manages Dense Vector Storage (Qdrant Disk Persistence/Cloud) and Parent-Child retrieval using Postgres.
     """
 
-    def __init__(self, collection_name: str = "nexus_rag_docs"):
+    def __init__(self, collection_name: str = "nexus_rag_cohere"):
         self.collection_name = collection_name
         self.embeddings = get_embeddings()
         
@@ -45,7 +45,7 @@ class QdrantVectorStore(VectorStoreInterface):
             self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=models.VectorParams(
-                    size=384,
+                    size=1024,
                     distance=models.Distance.COSINE
                 )
             )
