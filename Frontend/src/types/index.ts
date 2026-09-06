@@ -19,3 +19,12 @@ export interface IngestResponse {
   child_chunks_created: number;
   message: string;
 }
+
+export interface SystemInfoResponse {
+  status: string;
+  system: string;
+  active_llm_model: string;
+  vector_provider: string;
+  reranker_model: string;
+  hyde_enabled: boolean;
+}

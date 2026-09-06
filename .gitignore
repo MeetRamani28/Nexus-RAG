@@ -5,8 +5,6 @@
 *.env
 .env.local
 .env.*.local
-# Keep .env.example (template for others)
-!.env.example
 
 # ========================
 # PYTHON
@@ -31,18 +29,28 @@ ENV/
 # ========================
 # VECTOR STORE / ML DATA
 # ========================
-# Qdrant local disk storage (large, not for git)
 qdrant_storage/
-
-# Pickle files (parent document store)
 *.pkl
-
-# ML model weights/caches
 *.bin
 *.h5
 *.pt
 *.onnx
+
+# HuggingFace cache (large model files)
 .cache/
+huggingface/
+
+# ========================
+# NODE / FRONTEND
+# ========================
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # ========================
 # OS & EDITOR
@@ -52,6 +60,9 @@ Thumbs.db
 .vscode/
 .idea/
 *.suo
+*.ntvs*
+*.njsproj
+*.sln
 *.sw?
 
 # ========================
@@ -61,3 +72,9 @@ Thumbs.db
 logs/
 tmp/
 temp/
+
+# ========================
+# TEST / SAMPLE FILES
+# (remove if you want to commit these)
+# ========================
+sample_financial_report.pdf

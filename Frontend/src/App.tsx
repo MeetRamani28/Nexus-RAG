@@ -1,18 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Layers,
   ShieldCheck,
   Cpu,
   PanelLeftClose,
   PanelLeftOpen,
+  Database,
+  Zap,
 } from "lucide-react";
 import { PdfUploader } from "./components/PdfUploader";
 import { ChatInterface } from "./components/ChatInterface";
+import type { SystemInfoResponse } from "./types";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 export const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
   const [resetKey, setResetKey] = useState(0);
+  const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/v1/system/info`)
+      .then((res) => res.json())
+      .then((data: SystemInfoResponse) => setSystemInfo(data))
+      .catch((err) => console.error("Failed to fetch system info:", err));
+  }, []);
 
   const handleIngestSuccess = () => {
     localStorage.removeItem("nexus_rag_chat_history");
@@ -54,13 +67,32 @@ export const App: React.FC = () => {
           <div className="flex items-center space-x-1.5 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-300">
             <Cpu className="w-3.5 h-3.5 text-sky-400 shrink-0" />
             <span className="hidden md:inline">Groq</span>
-            <span className="text-slate-400">Llama-3.3-70B</span>
+            <span className="text-slate-400 font-mono text-[11px]">
+              {systemInfo?.active_llm_model || "Loading..."}
+            </span>
           </div>
+
+          <div className="flex items-center space-x-1.5 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-300">
+            <Database className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <span className="hidden md:inline">Vector DB</span>
+            <span className="text-slate-400 uppercase text-[11px] font-semibold">
+              {systemInfo?.vector_provider || "QDRANT"}
+            </span>
+          </div>
+
           <div className="flex items-center space-x-1.5 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-300">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span className="hidden md:inline">Cohere</span>
             <span className="text-slate-400">Rerank v3</span>
           </div>
+
+          {systemInfo?.hyde_enabled && (
+            <div className="flex items-center space-x-1.5 bg-slate-900/80 border border-amber-500/30 px-3 py-1.5 rounded-xl text-slate-300">
+              <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="hidden md:inline text-amber-400 text-[11px] font-semibold">HyDE</span>
+              <span className="text-slate-400 text-[11px]">ON</span>
+            </div>
+          )}
         </div>
       </header>
 

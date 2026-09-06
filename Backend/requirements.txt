@@ -19,3 +19,7 @@ tiktoken
 langsmith
 langchain-qdrant
 python-multipart
+sqlalchemy
+psycopg[binary]
+pgvector
+redis

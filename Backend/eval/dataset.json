@@ -1,0 +1,152 @@
+[
+  {
+    "id": "eval_01",
+    "query": "What is the net revenue growth rate for Q3?",
+    "ground_truth_keywords": ["revenue", "growth", "Q3", "percent", "quarter"],
+    "expected_source": "financial_report.pdf"
+  },
+  {
+    "id": "eval_02",
+    "query": "What were the total operating expenses in the recent fiscal year?",
+    "ground_truth_keywords": ["operating expenses", "OPEX", "fiscal year", "total"],
+    "expected_source": "financial_report.pdf"
+  },
+  {
+    "id": "eval_03",
+    "query": "What is the company's dividend payout policy and ratio?",
+    "ground_truth_keywords": ["dividend", "payout ratio", "shareholders", "policy"],
+    "expected_source": "financial_report.pdf"
+  },
+  {
+    "id": "eval_04",
+    "query": "What are the key risk factors related to foreign exchange fluctuations?",
+    "ground_truth_keywords": ["risk factors", "foreign exchange", "currency", "hedging"],
+    "expected_source": "annual_report.pdf"
+  },
+  {
+    "id": "eval_05",
+    "query": "How much capital was allocated to Research and Development (R&D)?",
+    "ground_truth_keywords": ["R&D", "research and development", "capital allocation", "expenses"],
+    "expected_source": "annual_report.pdf"
+  },
+  {
+    "id": "eval_06",
+    "query": "What is the total debt-to-equity ratio reported?",
+    "ground_truth_keywords": ["debt-to-equity", "ratio", "liabilities", "equity"],
+    "expected_source": "balance_sheet.pdf"
+  },
+  {
+    "id": "eval_07",
+    "query": "What were the EBITDA margins for the European division?",
+    "ground_truth_keywords": ["EBITDA", "margins", "European", "division", "segment"],
+    "expected_source": "financial_report.pdf"
+  },
+  {
+    "id": "eval_08",
+    "query": "What cybersecurity measures and compliance standards are implemented?",
+    "ground_truth_keywords": ["cybersecurity", "compliance", "ISO", "SOC2", "security"],
+    "expected_source": "tech_architecture.pdf"
+  },
+  {
+    "id": "eval_09",
+    "query": "How is customer data privacy protected under GDPR?",
+    "ground_truth_keywords": ["privacy", "GDPR", "customer data", "protection", "compliance"],
+    "expected_source": "compliance_doc.pdf"
+  },
+  {
+    "id": "eval_10",
+    "query": "What is the breakdown of cash flow from operating activities?",
+    "ground_truth_keywords": ["cash flow", "operating activities", "net cash", "working capital"],
+    "expected_source": "cash_flow.pdf"
+  },
+  {
+    "id": "eval_11",
+    "query": "What is the market share percentage in North America?",
+    "ground_truth_keywords": ["market share", "North America", "percentage", "region"],
+    "expected_source": "market_analysis.pdf"
+  },
+  {
+    "id": "eval_12",
+    "query": "What are the details of employee stock option plans (ESOP)?",
+    "ground_truth_keywords": ["ESOP", "employee stock", "vesting", "options", "compensation"],
+    "expected_source": "annual_report.pdf"
+  },
+  {
+    "id": "eval_13",
+    "query": "What is the capital expenditure (CapEx) guidance for the upcoming year?",
+    "ground_truth_keywords": ["CapEx", "capital expenditure", "guidance", "forecast"],
+    "expected_source": "financial_report.pdf"
+  },
+  {
+    "id": "eval_14",
+    "query": "What is the average customer acquisition cost (CAC)?",
+    "ground_truth_keywords": ["CAC", "customer acquisition cost", "marketing", "metrics"],
+    "expected_source": "metrics_report.pdf"
+  },
+  {
+    "id": "eval_15",
+    "query": "What is the net promoter score (NPS) and customer retention rate?",
+    "ground_truth_keywords": ["NPS", "net promoter score", "retention rate", "churn"],
+    "expected_source": "metrics_report.pdf"
+  },
+  {
+    "id": "eval_16",
+    "query": "What supply chain risks were identified in the quarterly assessment?",
+    "ground_truth_keywords": ["supply chain", "risk assessment", "vendor", "disruption"],
+    "expected_source": "operations_report.pdf"
+  },
+  {
+    "id": "eval_17",
+    "query": "What is the effective tax rate applied across jurisdictions?",
+    "ground_truth_keywords": ["tax rate", "effective tax", "jurisdictions", "provision"],
+    "expected_source": "financial_report.pdf"
+  },
+  {
+    "id": "eval_18",
+    "query": "What ESG (Environmental, Social, and Governance) targets were achieved?",
+    "ground_truth_keywords": ["ESG", "sustainability", "carbon footprint", "governance"],
+    "expected_source": "esg_report.pdf"
+  },
+  {
+    "id": "eval_19",
+    "query": "What is the company policy on intellectual property and patents?",
+    "ground_truth_keywords": ["intellectual property", "patents", "trademarks", "R&D"],
+    "expected_source": "annual_report.pdf"
+  },
+  {
+    "id": "eval_20",
+    "query": "What are the server infrastructure uptime metrics and SLA agreements?",
+    "ground_truth_keywords": ["SLA", "uptime", "availability", "infrastructure", "latency"],
+    "expected_source": "tech_architecture.pdf"
+  },
+  {
+    "id": "eval_21",
+    "query": "What are the details of recent mergers or corporate acquisitions?",
+    "ground_truth_keywords": ["merger", "acquisition", "M&A", "goodwill", "purchase price"],
+    "expected_source": "annual_report.pdf"
+  },
+  {
+    "id": "eval_22",
+    "query": "What is the inventory turnover ratio and working capital cycle?",
+    "ground_truth_keywords": ["inventory turnover", "working capital", "days sales outstanding", "DSO"],
+    "expected_source": "balance_sheet.pdf"
+  },
+  {
+    "id": "eval_23",
+    "query": "What regulatory approvals were granted for new product lines?",
+    "ground_truth_keywords": ["regulatory approval", "FDA", "compliance", "clearance"],
+    "expected_source": "compliance_doc.pdf"
+  },
+  {
+    "id": "eval_24",
+    "query": "What is the credit rating assigned by S&P and Moody's?",
+    "ground_truth_keywords": ["credit rating", "S&P", "Moody's", "investment grade", "bonds"],
+    "expected_source": "financial_report.pdf"
+  },
+  {
+    "id": "eval_25",
+    "query": "What are the principal terms of outstanding senior convertible notes?",
+    "ground_truth_keywords": ["convertible notes", "principal", "interest rate", "maturity", "debt"],
+    "expected_source": "financial_report.pdf"
+  }
+]

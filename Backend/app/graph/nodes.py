@@ -3,16 +3,20 @@ from typing import Dict, Any
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from app.schemas.state import RAGState
-from app.retrieval.vector_store import HybridVectorStore
+from app.retrieval.factory import get_vector_store
 from app.retrieval.reranker import RerankEngine
+from app.retrieval.hyde import HyDEEngine
+from app.llm_manager import get_active_llm_model_name
 
-vector_store_instance = HybridVectorStore()
+vector_store_instance = get_vector_store()
 reranker_instance = RerankEngine(top_n=4)
+hyde_engine = HyDEEngine()
 
 def retrieve_node(state: RAGState) -> Dict[str, Any]:
     query = state.get("question", "")
     try:
-        retrieved_parents = vector_store_instance.search_child_and_fetch_parents(query, top_k=10)
+        search_query = hyde_engine.generate_hypothetical_document(query)
+        retrieved_parents = vector_store_instance.search_child_and_fetch_parents(search_query, top_k=10)
         return {"documents": retrieved_parents}
     except Exception as e:
         print(f"[Retrieve Error]: {e}")
@@ -63,6 +67,11 @@ def generate_node(state: RAGState) -> Dict[str, Any]:
          for doc in reranked_docs]
     )
 
+    # Truncate context to max 6000 chars to stay within Groq token limits
+    MAX_CONTEXT_CHARS = 6000
+    if len(context_str) > MAX_CONTEXT_CHARS:
+        context_str = context_str[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated for token limit...]"
+
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are an expert Enterprise Financial Document Assistant (Nexus-RAG).\n"
                    "Answer the user's query accurately using ONLY the information provided in the Context below.\n"
@@ -72,16 +81,35 @@ def generate_node(state: RAGState) -> Dict[str, Any]:
     ])
 
     groq_api_key = os.getenv("GROQ_API_KEY", "")
+    active_model = get_active_llm_model_name()
     
     try:
         llm = ChatGroq(
             temperature=0.1,
-            model_name="llama-3.3-70b-versatile",
-            groq_api_key=groq_api_key
+            model_name=active_model,
+            groq_api_key=groq_api_key,
+            max_tokens=1024,  # cap to avoid OTPM rate limit errors
         )
         chain = prompt | llm
         response = chain.invoke({"context": context_str, "question": query})
         return {"generation": str(response.content)}
-    except Exception as e:
-        print(f"[Groq LLM Error]: {e}")
-        return {"generation": f"Error calling Groq API: {str(e)}"}
+    except Exception as primary_err:
+        print(f"[Groq LLM Warning]: Primary model '{active_model}' failed ({primary_err}). Attempting automatic fallback...")
+        try:
+            from app.llm_manager import fetch_active_groq_models
+            available = fetch_active_groq_models(groq_api_key)
+            fallback_model = next((m for m in available if m != active_model), "llama-3.1-8b-instant")
+            
+            print(f"[Groq LLM Fallback]: Retrying with alternative active model '{fallback_model}'...")
+            fallback_llm = ChatGroq(
+                temperature=0.1,
+                model_name=fallback_model,
+                groq_api_key=groq_api_key,
+                max_tokens=1024,  # cap to avoid OTPM rate limit errors
+            )
+            fallback_chain = prompt | fallback_llm
+            response = fallback_chain.invoke({"context": context_str, "question": query})
+            return {"generation": str(response.content)}
+        except Exception as fallback_err:
+            print(f"[Groq LLM Error]: Both primary and fallback models failed: {fallback_err}")
+            return {"generation": f"Error calling Groq API: {str(primary_err)}"}

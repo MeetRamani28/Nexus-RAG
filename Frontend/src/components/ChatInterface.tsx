@@ -157,7 +157,7 @@ export const ChatInterface: React.FC = () => {
               Intelligence Assistant
             </h3>
             <p className="text-xs text-slate-400">
-              Hybrid Search + Cohere Rerank + Llama 3
+              Hybrid Vector Search + Cohere Rerank + Dynamic LLM Engine
             </p>
           </div>
         </div>

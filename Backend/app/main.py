@@ -11,6 +11,8 @@ from app.schemas.payload import QueryRequest, DocumentIngestResponse
 from app.ingestion.pdf_processor import PDFIngestionEngine
 from app.graph.nodes import vector_store_instance
 from app.graph.workflow import rag_graph
+from app.cache import RedisSemanticCache
+from app.llm_manager import get_active_llm_model_name
 
 load_dotenv()
 
@@ -25,10 +27,26 @@ app.add_middleware(
 )
 
 ingestion_engine = PDFIngestionEngine()
+semantic_cache = RedisSemanticCache()
 
 @app.get("/")
 def read_root():
     return {"status": "online", "system": "Nexus-RAG Enterprise Engine v1.0"}
+
+
+@app.get("/api/v1/system/info")
+def get_system_info():
+    provider = os.getenv("VECTOR_STORE_PROVIDER", "qdrant").strip().lower()
+    active_model = get_active_llm_model_name()
+    hyde_enabled = os.getenv("HYDE_ENABLED", "true").strip().lower() in ["true", "1", "yes"]
+    return {
+        "status": "online",
+        "system": "Nexus-RAG Enterprise Engine v1.0",
+        "active_llm_model": active_model,
+        "vector_provider": provider,
+        "reranker_model": "rerank-english-v3.0",
+        "hyde_enabled": hyde_enabled
+    }
 
 
 @app.post("/api/v1/ingest", response_model=DocumentIngestResponse)
@@ -56,7 +74,7 @@ async def ingest_pdf(file: UploadFile = File(...)):
             filename=file.filename,
             parent_chunks_created=len(parent_docs),
             child_chunks_created=len(child_docs),
-            message="Document successfully processed, indexed, and stored in Qdrant."
+            message="Document successfully processed, indexed, and stored in Vector Store."
         )
 
     except Exception as e:
@@ -69,10 +87,33 @@ async def ingest_pdf(file: UploadFile = File(...)):
 @app.post("/api/v1/query/stream")
 async def stream_query(payload: QueryRequest):
     """
-    SSE Streaming Endpoint: Executes LangGraph workflow and streams final response tokens.
+    SSE Streaming Endpoint: Checks Redis Semantic Cache first, then executes LangGraph workflow.
     """
     async def event_generator():
         try:
+            # 1. Check Redis Semantic Cache
+            cached_result = semantic_cache.get_cached_response(payload.question)
+            if cached_result:
+                cached_generation, cached_citations, score = cached_result
+                
+                # Stream cached citations
+                yield {
+                    "event": "citations",
+                    "data": json.dumps({"citations": cached_citations})
+                }
+
+                # Stream cached generation tokens
+                for word in cached_generation.split(" "):
+                    yield {
+                        "event": "message",
+                        "data": json.dumps({"token": word + " "})
+                    }
+                    await asyncio.sleep(0.01)
+
+                yield {"event": "done", "data": "[DONE]"}
+                return
+
+            # 2. Cache Miss: Execute LangGraph RAG Workflow
             initial_state: dict = {
                 "question": payload.question,
                 "documents": [],
@@ -85,13 +126,15 @@ async def stream_query(payload: QueryRequest):
 
             final_state = rag_graph.invoke(initial_state)
 
+            citations = final_state.get("citation_sources", [])
+            generation_text = final_state.get("generation", "No response generated.")
+
             citations_event = {
                 "event": "citations",
-                "data": json.dumps({"citations": final_state.get("citation_sources", [])})
+                "data": json.dumps({"citations": citations})
             }
             yield citations_event
 
-            generation_text = final_state.get("generation", "No response generated.")
             for word in generation_text.split(" "):
                 chunk_event = {
                     "event": "message",
@@ -99,6 +142,10 @@ async def stream_query(payload: QueryRequest):
                 }
                 yield chunk_event
                 await asyncio.sleep(0.02)
+
+            # 3. Store result in Redis Semantic Cache for future queries
+            if generation_text and not generation_text.startswith("Error"):
+                semantic_cache.set_cached_response(payload.question, generation_text, citations)
 
         except Exception as e:
             error_event = {
