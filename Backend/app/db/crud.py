@@ -10,7 +10,7 @@ from app.db.models import Conversation, Message, IngestedDocument
 
 def create_conversation(db: Session, user_id: str, title: str = "New Conversation") -> Conversation:
     from app.db.crud import create_or_update_user
-    create_or_update_user(db, user_id, "user@example.com")
+    create_or_update_user(db, user_id, f"{user_id}@example.com")
     conv = Conversation(title=title, user_id=user_id)
     db.add(conv)
     db.commit()
