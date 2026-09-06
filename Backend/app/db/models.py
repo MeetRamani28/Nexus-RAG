@@ -13,10 +13,20 @@ def _uuid() -> str:
     return uuid.uuid4().hex
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(255), primary_key=True) # Clerk User ID
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    first_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    last_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
 class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(255), ForeignKey("users.id", ondelete="CASCADE"), index=True)
     title: Mapped[str] = mapped_column(String(200), default="New Conversation")
     source_file: Mapped[str | None] = mapped_column(String(500), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
@@ -25,6 +35,7 @@ class Conversation(Base):
     messages: Mapped[list["Message"]] = relationship(
         "Message", back_populates="conversation", cascade="all, delete-orphan", order_by="Message.created_at"
     )
+    user: Mapped["User"] = relationship("User")
 
 
 class Message(Base):
@@ -44,8 +55,9 @@ class IngestedDocument(Base):
     __tablename__ = "ingested_documents"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
-    filename: Mapped[str] = mapped_column(String(500), unique=True, index=True)
-    file_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    user_id: Mapped[str] = mapped_column(String(255), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    filename: Mapped[str] = mapped_column(String(500))
+    file_hash: Mapped[str] = mapped_column(String(64), index=True)
     parent_chunks: Mapped[int] = mapped_column(Integer, default=0)
     child_chunks: Mapped[int] = mapped_column(Integer, default=0)
     ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
@@ -54,6 +66,7 @@ class ParentDocument(Base):
     __tablename__ = "parent_documents"
 
     id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(255), ForeignKey("users.id", ondelete="CASCADE"), index=True)
     content: Mapped[str] = mapped_column(Text, default="")
     metadata_json: Mapped[str] = mapped_column(Text, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

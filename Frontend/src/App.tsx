@@ -1,34 +1,48 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Database, Zap, ShieldCheck, PanelLeftClose, PanelLeftOpen, Layers
+  Database, Zap, ShieldCheck, PanelLeftClose, PanelLeftOpen, Layers, Menu, X, LogOut, User
 } from "lucide-react";
 import { Sidebar } from "./components/Sidebar";
 import { ChatInterface } from "./components/ChatInterface";
 import { DocumentModal } from "./components/DocumentModal";
 import type { ConversationListItem, SystemInfoResponse } from "./types";
+import { SignedIn, SignedOut, useAuth, useUser, UserButton } from "@clerk/clerk-react";
+import { AuthPage } from "./components/AuthPage";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-export const App: React.FC = () => {
+const MainApp: React.FC = () => {
+  const { getToken } = useAuth();
+  const { user } = useUser();
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Default false on mobile
   const [docModalOpen, setDocModalOpen] = useState(false);
   const [docCount, setDocCount] = useState(0);
 
+  // Authenticated Fetch wrapper
+  const fetchAuth = useCallback(async (url: string, options: RequestInit = {}) => {
+    const token = await getToken();
+    const headers = new Headers(options.headers || {});
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+    return fetch(url, { ...options, headers });
+  }, [getToken]);
+
   // Fetch System Info
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/v1/system/info`)
+    fetchAuth(`${API_BASE_URL}/api/v1/system/info`)
       .then((r) => r.json())
       .then((d: SystemInfoResponse) => setSystemInfo(d))
       .catch(() => {});
-  }, []);
+  }, [fetchAuth]);
 
   // Fetch Document Count
   const fetchDocCount = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/documents`);
+      const res = await fetchAuth(`${API_BASE_URL}/api/v1/documents`);
       if (res.ok) {
         const docs = await res.json();
         setDocCount(docs.length);
@@ -36,7 +50,7 @@ export const App: React.FC = () => {
     } catch {
       // ignore
     }
-  }, []);
+  }, [fetchAuth]);
 
   useEffect(() => {
     fetchDocCount();
@@ -45,7 +59,7 @@ export const App: React.FC = () => {
   // Fetch Conversation List
   const fetchConversations = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/conversations`);
+      const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations`);
       if (res.ok) {
         const list: ConversationListItem[] = await res.json();
         setConversations(list);
@@ -56,16 +70,30 @@ export const App: React.FC = () => {
     } catch {
       // ignore
     }
-  }, []);
+  }, [fetchAuth, activeConversationId]);
 
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
 
+  // Handle screen resize to show/hide sidebar automatically on desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Create New Chat
   const handleNewChat = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/conversations`, {
+      const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: "New Conversation" }),
@@ -73,6 +101,7 @@ export const App: React.FC = () => {
       const newConv: ConversationListItem = await res.json();
       setConversations((prev) => [newConv, ...prev]);
       setActiveConversationId(newConv.id);
+      if (window.innerWidth < 768) setSidebarOpen(false);
     } catch {
       // ignore
     }
@@ -80,7 +109,7 @@ export const App: React.FC = () => {
 
   const handleDeleteConversation = async (id: string) => {
     try {
-      await fetch(`${API_BASE_URL}/api/v1/conversations/${id}`, { method: "DELETE" });
+      await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`, { method: "DELETE" });
       setConversations((prev) => prev.filter((c) => c.id !== id));
       if (activeConversationId === id) {
         const remaining = conversations.filter((c) => c.id !== id);
@@ -97,14 +126,27 @@ export const App: React.FC = () => {
     );
   };
 
+  const selectConversation = (id: string) => {
+    setActiveConversationId(id);
+    if (window.innerWidth < 768) setSidebarOpen(false);
+  }
+
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#050811] text-slate-100 font-sans overflow-hidden">
+    <div className="flex flex-col h-[100dvh] w-screen bg-[#050811] text-slate-100 font-sans overflow-hidden">
       {/* ── Top Header ─────────────────────────────────────────── */}
       <header className="h-14 border-b border-slate-800/60 bg-[#0a0f1c]/80 backdrop-blur-xl px-4 flex items-center justify-between shrink-0 z-20">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen((v) => !v)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors md:hidden"
+            title={sidebarOpen ? "Close Menu" : "Open Menu"}
+          >
+            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+          
+          <button
+            onClick={() => setSidebarOpen((v) => !v)}
+            className="hidden md:block p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors"
             title={sidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
           >
             {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4 text-blue-400" />}
@@ -121,33 +163,55 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* System Badges */}
-        <div className="flex items-center gap-2">
-          <div className="hidden md:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800/80 px-2.5 py-1 rounded-lg text-slate-300">
+        {/* System Badges & Auth */}
+        <div className="flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800/80 px-2.5 py-1 rounded-lg text-slate-300">
             <Database className="w-3.5 h-3.5 text-violet-400" />
             <span className="text-[11px] font-semibold uppercase text-slate-400">{systemInfo?.vector_provider ?? "QDRANT"}</span>
           </div>
 
-          <div className="hidden md:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800/80 px-2.5 py-1 rounded-lg text-slate-300">
+          <div className="hidden lg:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800/80 px-2.5 py-1 rounded-lg text-slate-300">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
             <span className="text-[11px] text-slate-400">Cohere Rerank</span>
           </div>
 
           {systemInfo?.hyde_enabled && (
-            <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-lg">
+            <div className="hidden sm:flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-lg">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
               <span className="text-[11px] text-amber-400 font-semibold">HyDE Active</span>
             </div>
           )}
+
+          <div className="flex items-center gap-2 pl-2 border-l border-slate-700/50">
+             <div className="hidden md:flex flex-col items-end mr-1">
+                 <span className="text-xs font-semibold text-slate-200">{user?.firstName || user?.username || 'User'}</span>
+                 <span className="text-[10px] text-slate-500">{user?.primaryEmailAddress?.emailAddress}</span>
+             </div>
+             <UserButton 
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox: "w-8 h-8 border-2 border-slate-800"
+                  }
+                }}
+             />
+          </div>
         </div>
       </header>
 
       {/* ── Body Layout ────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Mobile Backdrop */}
+        {sidebarOpen && (
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
         <aside
-          className={`shrink-0 transition-all duration-300 ease-in-out overflow-hidden z-10 ${
-            sidebarOpen ? "w-64" : "w-0"
+          className={`absolute md:relative shrink-0 transition-all duration-300 ease-in-out h-full z-30 ${
+            sidebarOpen ? "translate-x-0 w-[80%] sm:w-64" : "-translate-x-full md:translate-x-0 md:w-0"
           }`}
         >
           <Sidebar
@@ -155,19 +219,24 @@ export const App: React.FC = () => {
             activeId={activeConversationId}
             docCount={docCount}
             onNewChat={handleNewChat}
-            onSelect={(id) => setActiveConversationId(id)}
+            onSelect={selectConversation}
             onDelete={handleDeleteConversation}
             onRename={handleRenameConversation}
-            onOpenDocs={() => setDocModalOpen(true)}
+            onOpenDocs={() => {
+              setDocModalOpen(true);
+              if (window.innerWidth < 768) setSidebarOpen(false);
+            }}
+            fetchAuth={fetchAuth}
           />
         </aside>
 
         {/* Main Chat Interface */}
-        <main className="flex-1 min-w-0 bg-[#050811] flex flex-col h-full overflow-hidden">
+        <main className="flex-1 min-w-0 bg-[#050811] flex flex-col h-full overflow-hidden w-full relative z-10">
           <ChatInterface
             conversationId={activeConversationId}
             onDocUploaded={fetchDocCount}
             onConversationUpdated={fetchConversations}
+            fetchAuth={fetchAuth}
           />
         </main>
       </div>
@@ -177,8 +246,22 @@ export const App: React.FC = () => {
         isOpen={docModalOpen}
         onClose={() => setDocModalOpen(false)}
         onDocsChanged={fetchDocCount}
+        fetchAuth={fetchAuth}
       />
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <>
+      <SignedIn>
+        <MainApp />
+      </SignedIn>
+      <SignedOut>
+        <AuthPage mode="signin" />
+      </SignedOut>
+    </>
   );
 };
 

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { FileText, Trash2, X, RefreshCw, Loader2, Database } from "lucide-react";
 import type { IngestedDocument } from "../types";
 
@@ -8,9 +8,10 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onDocsChanged: () => void;
+  fetchAuth?: (url: string, options?: RequestInit) => Promise<Response>;
 }
 
-export const DocumentModal: React.FC<Props> = ({ isOpen, onClose, onDocsChanged }) => {
+export const DocumentModal: React.FC<Props> = ({ isOpen, onClose, onDocsChanged, fetchAuth = fetch }) => {
   const [documents, setDocuments] = useState<IngestedDocument[]>([]);
   const [loading, setLoading] = useState(false);
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export const DocumentModal: React.FC<Props> = ({ isOpen, onClose, onDocsChanged 
   const fetchDocs = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/documents`);
+      const res = await fetchAuth(`${API_BASE_URL}/api/v1/documents`);
       if (res.ok) {
         setDocuments(await res.json());
       }
@@ -36,7 +37,7 @@ export const DocumentModal: React.FC<Props> = ({ isOpen, onClose, onDocsChanged 
   const handleDelete = async (filename: string) => {
     setDeletingFile(filename);
     try {
-      await fetch(`${API_BASE_URL}/api/v1/documents/${encodeURIComponent(filename)}`, {
+      await fetchAuth(`${API_BASE_URL}/api/v1/documents/${encodeURIComponent(filename)}`, {
         method: "DELETE",
       });
       setDocuments((prev) => prev.filter((d) => d.filename !== filename));

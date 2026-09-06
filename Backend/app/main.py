@@ -30,6 +30,7 @@ from app.cache import RedisSemanticCache
 from app.llm_manager import get_active_llm_model_name
 from app.db.database import get_db, init_db
 from app.db import crud
+from app.auth import get_current_user_id
 
 load_dotenv()
 
@@ -145,8 +146,8 @@ def get_system_info():
 # ─── Conversations ────────────────────────────────────────────────────────────
 
 @app.get("/api/v1/conversations", response_model=List[ConversationListItem])
-def list_conversations(db: Session = Depends(get_db)):
-    convs = crud.list_conversations(db)
+def list_conversations(db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    convs = crud.list_conversations(db, user_id)
     result = []
     for c in convs:
         # Count user questions only so 1 Q&A turn = 1 query
@@ -165,8 +166,8 @@ def list_conversations(db: Session = Depends(get_db)):
 
 
 @app.post("/api/v1/conversations", response_model=ConversationListItem)
-def create_conversation(payload: ConversationCreate, db: Session = Depends(get_db)):
-    conv = crud.create_conversation(db, title=payload.title or "New Conversation")
+def create_conversation(payload: ConversationCreate, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    conv = crud.create_conversation(db, user_id, title=payload.title or "New Conversation")
     return ConversationListItem(
         id=conv.id,
         title=conv.title,
@@ -178,8 +179,8 @@ def create_conversation(payload: ConversationCreate, db: Session = Depends(get_d
 
 
 @app.get("/api/v1/conversations/{conversation_id}", response_model=ConversationDetail)
-def get_conversation(conversation_id: str, db: Session = Depends(get_db)):
-    conv = crud.get_conversation(db, conversation_id)
+def get_conversation(conversation_id: str, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    conv = crud.get_conversation(db, conversation_id, user_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
     messages = [
@@ -203,8 +204,8 @@ def get_conversation(conversation_id: str, db: Session = Depends(get_db)):
 
 
 @app.patch("/api/v1/conversations/{conversation_id}/title", response_model=ConversationListItem)
-def rename_conversation(conversation_id: str, payload: ConversationTitleUpdate, db: Session = Depends(get_db)):
-    conv = crud.update_conversation_title(db, conversation_id, payload.title)
+def rename_conversation(conversation_id: str, payload: ConversationTitleUpdate, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    conv = crud.update_conversation_title(db, conversation_id, payload.title, user_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return ConversationListItem(
@@ -219,10 +220,10 @@ def rename_conversation(conversation_id: str, payload: ConversationTitleUpdate, 
 
 @app.post("/api/v1/conversations/{conversation_id}/attach_document")
 def attach_document_to_conversation(
-    conversation_id: str, filename: str, db: Session = Depends(get_db)
+    conversation_id: str, filename: str, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)
 ):
     """Associates an existing ingested document with a conversation session."""
-    conv = crud.update_conversation_source_file(db, conversation_id, filename)
+    conv = crud.update_conversation_source_file(db, conversation_id, filename, user_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return {
@@ -234,8 +235,8 @@ def attach_document_to_conversation(
 
 
 @app.delete("/api/v1/conversations/{conversation_id}")
-def delete_conversation(conversation_id: str, db: Session = Depends(get_db)):
-    success = crud.delete_conversation(db, conversation_id)
+def delete_conversation(conversation_id: str, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    success = crud.delete_conversation(db, conversation_id, user_id)
     if not success:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return {"status": "deleted", "id": conversation_id}
@@ -244,13 +245,13 @@ def delete_conversation(conversation_id: str, db: Session = Depends(get_db)):
 # ─── Documents ────────────────────────────────────────────────────────────────
 
 @app.get("/api/v1/documents", response_model=List[IngestedDocumentResponse])
-def list_documents(db: Session = Depends(get_db)):
-    return crud.list_ingested_docs(db)
+def list_documents(db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    return crud.list_ingested_docs(db, user_id)
 
 
 @app.delete("/api/v1/documents/{filename:path}")
-def delete_document(filename: str, db: Session = Depends(get_db)):
-    success = crud.delete_ingested_doc(db, filename)
+def delete_document(filename: str, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    success = crud.delete_ingested_doc(db, filename, user_id)
     if not success:
         raise HTTPException(status_code=404, detail="Document record not found")
     return {"status": "deleted", "filename": filename}
@@ -262,7 +263,8 @@ def delete_document(filename: str, db: Session = Depends(get_db)):
 async def ingest_pdf(
     file: UploadFile = File(...),
     conversation_id: Optional[str] = Form(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id)
 ):
     """Upload and process a PDF. Skips ingestion if identical file was already processed (MD5 check)."""
     if not file.filename.endswith(".pdf"):
@@ -273,7 +275,7 @@ async def ingest_pdf(
 
     # If conversation_id is provided, associate PDF with this conversation session
     if conversation_id:
-        crud.update_conversation_source_file(db, conversation_id, file.filename)
+        crud.update_conversation_source_file(db, conversation_id, file.filename, user_id)
 
     # Duplicate detection
     existing = crud.doc_exists_by_hash(db, file_hash)
@@ -303,6 +305,7 @@ async def ingest_pdf(
             file_hash=file_hash,
             parent_chunks=len(parent_docs),
             child_chunks=len(child_docs),
+            user_id=user_id,
         )
 
         return DocumentIngestResponse(
@@ -324,17 +327,17 @@ async def ingest_pdf(
 
 @app.post("/api/v1/query/stream")
 @limiter.limit("30/minute")
-async def stream_query(request: Request, payload: QueryRequest, db: Session = Depends(get_db)):
+async def stream_query(request: Request, payload: QueryRequest, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
     """SSE streaming endpoint. Checks Redis cache, executes RAG graph, saves to DB."""
 
     async def event_generator():
         try:
             source_file = None
             if payload.conversation_id:
-                conv = crud.get_conversation(db, payload.conversation_id)
+                conv = crud.get_conversation(db, payload.conversation_id, user_id)
                 if conv:
                     source_file = conv.source_file
-                crud.add_message(db, payload.conversation_id, "user", payload.question)
+                crud.add_message(db, payload.conversation_id, user_id, "user", payload.question)
 
             # 2. Check Redis Semantic Cache
             cached_result = semantic_cache.get_cached_response(payload.question)
@@ -346,7 +349,7 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                     await asyncio.sleep(0.01)
                 # Save cached assistant response to DB
                 if payload.conversation_id:
-                    crud.add_message(db, payload.conversation_id, "assistant", cached_generation, cached_citations)
+                    crud.add_message(db, payload.conversation_id, user_id, "assistant", cached_generation, cached_citations)
                 yield {"event": "done", "data": "[DONE]"}
                 return
 
@@ -375,7 +378,7 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
             if generation_text and not generation_text.startswith("Error"):
                 semantic_cache.set_cached_response(payload.question, generation_text, citations)
             if payload.conversation_id:
-                crud.add_message(db, payload.conversation_id, "assistant", generation_text, citations)
+                crud.add_message(db, payload.conversation_id, user_id, "assistant", generation_text, citations)
 
         except Exception as e:
             yield {"event": "message", "data": json.dumps({"token": f"\n\n[System Error]: {str(e)}"})}

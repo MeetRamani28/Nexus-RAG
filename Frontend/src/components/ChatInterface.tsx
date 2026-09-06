@@ -30,6 +30,7 @@ interface Props {
   conversationId: string | null;
   onDocUploaded: () => void;
   onConversationUpdated?: () => void;
+  fetchAuth: (url: string, options?: RequestInit) => Promise<Response>;
 }
 
 // ─── Copy Button ─────────────────────────────────────────────────────────────
@@ -115,6 +116,7 @@ export const ChatInterface: React.FC<Props> = ({
   conversationId,
   onDocUploaded,
   onConversationUpdated,
+  fetchAuth,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -138,7 +140,7 @@ export const ChatInterface: React.FC<Props> = ({
 
   // Fetch Available Models
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/v1/models`)
+    fetchAuth(`${API_BASE_URL}/api/v1/models`)
       .then((r) => r.json())
       .then((data: LlmModel[]) => {
         if (data && data.length > 0) {
@@ -146,7 +148,7 @@ export const ChatInterface: React.FC<Props> = ({
         }
       })
       .catch(() => {});
-  }, []);
+  }, [fetchAuth]);
 
   // Close model dropdown on outside click
   useEffect(() => {
@@ -165,14 +167,14 @@ export const ChatInterface: React.FC<Props> = ({
   // Fetch ingested docs list for selection
   const fetchExistingDocs = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/documents`);
+      const res = await fetchAuth(`${API_BASE_URL}/api/v1/documents`);
       if (res.ok) {
         setExistingDocs(await res.json());
       }
     } catch {
       // ignore
     }
-  }, []);
+  }, [fetchAuth]);
 
   useEffect(() => {
     fetchExistingDocs();
@@ -181,7 +183,7 @@ export const ChatInterface: React.FC<Props> = ({
   // Load Messages for active conversation
   const loadMessages = useCallback(async (id: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/conversations/${id}`);
+      const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`);
       if (!res.ok) return;
       const data: ConversationDetail = await res.json();
       setActiveSourceFile(data.source_file || null);
@@ -198,7 +200,7 @@ export const ChatInterface: React.FC<Props> = ({
       setMessages([]);
       setActiveSourceFile(null);
     }
-  }, []);
+  }, [fetchAuth]);
 
   useEffect(() => {
     setAttachedFile(null);
@@ -236,7 +238,7 @@ export const ChatInterface: React.FC<Props> = ({
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/ingest`, {
+      const res = await fetchAuth(`${API_BASE_URL}/api/v1/ingest`, {
         method: "POST",
         body: formData,
       });
@@ -262,7 +264,7 @@ export const ChatInterface: React.FC<Props> = ({
   const handleAttachExistingDoc = async (filename: string) => {
     if (!conversationId) return;
     try {
-      const res = await fetch(
+      const res = await fetchAuth(
         `${API_BASE_URL}/api/v1/conversations/${conversationId}/attach_document?filename=${encodeURIComponent(filename)}`,
         { method: "POST" }
       );
@@ -302,7 +304,7 @@ export const ChatInterface: React.FC<Props> = ({
     setTimeout(() => setPipeline("generating"), 1800);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/query/stream`, {
+      const res = await fetchAuth(`${API_BASE_URL}/api/v1/query/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -16,6 +16,7 @@ interface Props {
   onDelete: (id: string) => void;
   onRename: (id: string, title: string) => void;
   onOpenDocs: () => void;
+  fetchAuth?: (url: string, options?: RequestInit) => Promise<Response>;
 }
 
 function relativeLabel(dateStr: string): string {
@@ -41,7 +42,7 @@ function groupConversations(list: ConversationListItem[]) {
 
 export const Sidebar: React.FC<Props> = ({
   conversations, activeId, docCount,
-  onNewChat, onSelect, onDelete, onRename, onOpenDocs,
+  onNewChat, onSelect, onDelete, onRename, onOpenDocs, fetchAuth = fetch
 }) => {
   const [search, setSearch] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
@@ -62,7 +63,7 @@ export const Sidebar: React.FC<Props> = ({
   const commitEdit = async (id: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     if (editVal.trim()) {
-      await fetch(`${API_BASE_URL}/api/v1/conversations/${id}/title`, {
+      await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}/title`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: editVal.trim() }),
