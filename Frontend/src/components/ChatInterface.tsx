@@ -302,8 +302,8 @@ export const ChatInterface: React.FC<Props> = ({
     setIsStreaming(true);
     setPipeline("retrieving");
 
-    const t1 = setTimeout(() => setPipeline((p) => p !== "idle" && p !== "done" ? "reranking" : p), 900);
-    const t2 = setTimeout(() => setPipeline((p) => p !== "idle" && p !== "done" ? "generating" : p), 1800);
+    setTimeout(() => setPipeline((p) => p !== "idle" && p !== "done" ? "reranking" : p), 900);
+    setTimeout(() => setPipeline((p) => p !== "idle" && p !== "done" ? "generating" : p), 1800);
 
     try {
       const res = await fetchAuth(`${API_BASE_URL}/api/v1/query/stream`, {
