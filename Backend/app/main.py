@@ -296,7 +296,7 @@ async def ingest_pdf(
     try:
         raw_docs = ingestion_engine.load_pdf(temp_path)
         parent_docs, child_docs = ingestion_engine.create_parent_child_chunks(raw_docs, file.filename)
-        vector_store_instance.store_documents(parent_docs, child_docs)
+        vector_store_instance.store_documents(parent_docs, child_docs, user_id)
 
         # Save to DB
         crud.save_ingested_doc(

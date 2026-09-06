@@ -50,7 +50,7 @@ class QdrantVectorStore(VectorStoreInterface):
                 )
             )
 
-    def store_documents(self, parent_docs: List[Document], child_docs: List[Document]) -> None:
+    def store_documents(self, parent_docs: List[Document], child_docs: List[Document], user_id: str) -> None:
         """
         Stores Parent docs in PostgreSQL DB and embeds Child docs in Qdrant Storage.
         """
@@ -63,7 +63,8 @@ class QdrantVectorStore(VectorStoreInterface):
                         db=db, 
                         parent_id=parent_id, 
                         content=p_doc.page_content, 
-                        metadata_dict=p_doc.metadata
+                        metadata_dict=p_doc.metadata,
+                        user_id=user_id
                     )
         finally:
             db.close()

@@ -37,7 +37,7 @@ class PgVectorStore(VectorStoreInterface):
         except Exception as e:
             print(f"[PgVectorStore Warning]: Failed to initialize database extension or tables: {e}")
 
-    def store_documents(self, parent_docs: List[Document], child_docs: List[Document]) -> None:
+    def store_documents(self, parent_docs: List[Document], child_docs: List[Document], user_id: str) -> None:
         """
         Stores Parent documents and Child vector chunks into PostgreSQL.
         """
@@ -53,6 +53,7 @@ class PgVectorStore(VectorStoreInterface):
                 if not existing_parent:
                     parent_record = ParentDocumentModel(
                         parent_id=parent_id,
+                        user_id=user_id,
                         source_file=p_doc.metadata.get("source_file", "unknown"),
                         page_number=p_doc.metadata.get("page", 1),
                         page_content=p_doc.page_content

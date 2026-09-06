@@ -9,7 +9,7 @@ class VectorStoreInterface(ABC):
     """
 
     @abstractmethod
-    def store_documents(self, parent_docs: List[Document], child_docs: List[Document]) -> None:
+    def store_documents(self, parent_docs: List[Document], child_docs: List[Document], user_id: str) -> None:
         """
         Stores Parent context documents and indexes Child vector chunks.
         """
