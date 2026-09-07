@@ -120,13 +120,7 @@ export const ChatInterface: React.FC<Props> = ({
   onNewChat,
   fetchAuth,
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    if (conversationId) {
-      const cached = localStorage.getItem(`nexus_messages_${conversationId}`);
-      return cached ? JSON.parse(cached) : [];
-    }
-    return [];
-  });
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [pipeline, setPipeline] = useState<PipelineStep>("idle");
@@ -219,17 +213,6 @@ export const ChatInterface: React.FC<Props> = ({
       setActiveSourceFile(null);
     }
   }, [conversationId, loadMessages]);
-
-  // Sync messages to localStorage
-  useEffect(() => {
-    if (conversationId && messages.length > 0) {
-      localStorage.setItem(`nexus_messages_${conversationId}`, JSON.stringify(messages));
-    } else if (conversationId && messages.length === 0) {
-      // Don't remove on empty array as it might just be loading, or do remove if we want it clear.
-      // Better to only set if we have messages, or set empty if we genuinely cleared it.
-      localStorage.setItem(`nexus_messages_${conversationId}`, JSON.stringify(messages));
-    }
-  }, [conversationId, messages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

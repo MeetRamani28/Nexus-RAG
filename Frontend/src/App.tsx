@@ -14,30 +14,13 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000
 const MainApp: React.FC = () => {
   const { getToken } = useAuth();
   const { user } = useUser();
-  const [conversations, setConversations] = useState<ConversationListItem[]>(() => {
-    const cached = localStorage.getItem("nexus_conversations");
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
-    return localStorage.getItem("nexus_active_conversation_id") || null;
-  });
+  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [isBackendWakingUp, setIsBackendWakingUp] = useState(true);
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false); // Default false on mobile
   const [docModalOpen, setDocModalOpen] = useState(false);
   const [docCount, setDocCount] = useState(0);
-
-  // Sync state to localStorage for instantaneous UI updates on cold start
-  useEffect(() => {
-    localStorage.setItem("nexus_conversations", JSON.stringify(conversations));
-  }, [conversations]);
-
-  useEffect(() => {
-    if (activeConversationId) {
-      localStorage.setItem("nexus_active_conversation_id", activeConversationId);
-    } else {
-      localStorage.removeItem("nexus_active_conversation_id");
-    }
-  }, [activeConversationId]);
 
   // Authenticated Fetch wrapper
   const fetchAuth = useCallback(async (url: string, options: RequestInit = {}) => {
@@ -49,12 +32,29 @@ const MainApp: React.FC = () => {
     return fetch(url, { ...options, headers });
   }, [getToken]);
 
-  // Fetch System Info
+  // Fetch System Info & Health Check
   useEffect(() => {
-    fetchAuth(`${API_BASE_URL}/api/v1/system/info`)
-      .then((r) => r.json())
-      .then((d: SystemInfoResponse) => setSystemInfo(d))
-      .catch(() => {});
+    let isMounted = true;
+    const checkHealth = async () => {
+      try {
+        const r = await fetchAuth(`${API_BASE_URL}/api/v1/system/info`);
+        if (r.ok) {
+          const d: SystemInfoResponse = await r.json();
+          if (isMounted) {
+            setSystemInfo(d);
+            setIsBackendWakingUp(false);
+          }
+        } else {
+          // If 502 or other error (still waking up), retry in 3 seconds
+          if (isMounted) setTimeout(checkHealth, 3000);
+        }
+      } catch (err) {
+        // If network error (still waking up), retry in 3 seconds
+        if (isMounted) setTimeout(checkHealth, 3000);
+      }
+    };
+    checkHealth();
+    return () => { isMounted = false; };
   }, [fetchAuth]);
 
   // Fetch Document Count
@@ -147,6 +147,33 @@ const MainApp: React.FC = () => {
   const selectConversation = (id: string) => {
     setActiveConversationId(id);
     if (window.innerWidth < 768) setSidebarOpen(false);
+  }
+
+  if (isBackendWakingUp) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[100dvh] w-screen bg-[#050811] text-slate-100 font-sans relative overflow-hidden">
+        {/* Background Gradients */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-[100px] pointer-events-none" />
+        
+        <div className="flex flex-col items-center justify-center gap-8 z-10 p-6 text-center">
+          <div className="w-20 h-20 rounded-2xl bg-[#0a0f1c]/80 border border-blue-500/20 shadow-[0_0_40px_-10px_rgba(59,130,246,0.3)] flex items-center justify-center relative overflow-hidden group">
+             <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 to-violet-500/10 animate-pulse" />
+             <Layers className="w-10 h-10 text-blue-400 relative z-10 animate-bounce" style={{ animationDuration: '2s' }} />
+          </div>
+          <div className="space-y-4 max-w-md">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-100">Waking up Intelligence Engine...</h2>
+            <div className="flex flex-col gap-2 text-sm text-slate-400">
+              <p>Since this project is hosted on a free Render instance, the backend sleeps after inactivity.</p>
+              <p className="font-medium text-blue-400/80">Please wait 1-2 minutes for the container to spin up.</p>
+            </div>
+            <div className="flex items-center justify-center mt-6">
+              <div className="w-6 h-6 rounded-full border-2 border-slate-700 border-t-blue-500 animate-spin" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
