@@ -14,12 +14,30 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000
 const MainApp: React.FC = () => {
   const { getToken } = useAuth();
   const { user } = useUser();
-  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<ConversationListItem[]>(() => {
+    const cached = localStorage.getItem("nexus_conversations");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
+    return localStorage.getItem("nexus_active_conversation_id") || null;
+  });
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false); // Default false on mobile
   const [docModalOpen, setDocModalOpen] = useState(false);
   const [docCount, setDocCount] = useState(0);
+
+  // Sync state to localStorage for instantaneous UI updates on cold start
+  useEffect(() => {
+    localStorage.setItem("nexus_conversations", JSON.stringify(conversations));
+  }, [conversations]);
+
+  useEffect(() => {
+    if (activeConversationId) {
+      localStorage.setItem("nexus_active_conversation_id", activeConversationId);
+    } else {
+      localStorage.removeItem("nexus_active_conversation_id");
+    }
+  }, [activeConversationId]);
 
   // Authenticated Fetch wrapper
   const fetchAuth = useCallback(async (url: string, options: RequestInit = {}) => {
