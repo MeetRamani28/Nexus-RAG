@@ -179,7 +179,7 @@ const MainApp: React.FC = () => {
   return (
     <div className="flex flex-col h-[100dvh] w-screen bg-[#050811] text-slate-100 font-sans overflow-hidden">
       {/* ── Top Header ─────────────────────────────────────────── */}
-      <header className="h-14 border-b border-slate-800/60 bg-[#0a0f1c]/80 backdrop-blur-xl px-4 flex items-center justify-between shrink-0 z-20">
+      <header className="h-14 border-b border-slate-800/60 bg-[#0a0f1c]/80 backdrop-blur-xl px-4 flex items-center justify-between shrink-0 z-40 relative">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen((v) => !v)}
@@ -248,14 +248,14 @@ const MainApp: React.FC = () => {
         {/* Mobile Backdrop */}
         {sidebarOpen && (
           <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 md:hidden"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
         {/* Sidebar */}
         <aside
-          className={`absolute md:relative shrink-0 transition-all duration-300 ease-in-out h-full z-30 ${
+          className={`absolute md:relative shrink-0 transition-all duration-300 ease-in-out h-full z-40 overflow-hidden ${
             sidebarOpen ? "translate-x-0 w-[80%] sm:w-64" : "-translate-x-full md:translate-x-0 md:w-0"
           }`}
         >

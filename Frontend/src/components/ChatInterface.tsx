@@ -182,11 +182,19 @@ export const ChatInterface: React.FC<Props> = ({
     fetchExistingDocs();
   }, [fetchExistingDocs]);
 
+  const [isFetchingMessages, setIsFetchingMessages] = useState(false);
+
   // Load Messages for active conversation
   const loadMessages = useCallback(async (id: string) => {
+    setIsFetchingMessages(true);
     try {
       const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        setMessages([]);
+        setActiveSourceFile(null);
+        setIsFetchingMessages(false);
+        return;
+      }
       const data: ConversationDetail = await res.json();
       setActiveSourceFile(data.source_file || null);
       setMessages(
@@ -201,6 +209,8 @@ export const ChatInterface: React.FC<Props> = ({
     } catch {
       setMessages([]);
       setActiveSourceFile(null);
+    } finally {
+      setIsFetchingMessages(false);
     }
   }, [fetchAuth]);
 
@@ -404,6 +414,15 @@ export const ChatInterface: React.FC<Props> = ({
           <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
           Start New Chat
         </button>
+      </div>
+    );
+  }
+
+  if (isFetchingMessages) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center h-full text-center px-6">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
+        <p className="text-sm text-slate-400">Loading conversation...</p>
       </div>
     );
   }
