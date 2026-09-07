@@ -145,13 +145,19 @@ const MainApp: React.FC = () => {
   };
 
   const selectConversation = (id: string) => {
+    // Clean up abandoned empty conversations
+    const current = conversations.find(c => c.id === activeConversationId);
+    if (current && current.message_count === 0 && !current.source_file && current.id !== id) {
+      handleDeleteConversation(current.id);
+    }
+    
     setActiveConversationId(id);
     if (window.innerWidth < 768) setSidebarOpen(false);
   }
 
   if (isBackendWakingUp) {
     return (
-      <div className="flex flex-col items-center justify-center h-[100dvh] w-screen bg-[#050811] text-slate-100 font-sans relative overflow-hidden">
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#050811] text-slate-100 font-sans z-50 overflow-hidden">
         {/* Background Gradients */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-[100px] pointer-events-none" />
@@ -177,7 +183,7 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] w-screen bg-[#050811] text-slate-100 font-sans overflow-hidden">
+    <div className="fixed inset-0 flex flex-col bg-[#050811] text-slate-100 font-sans overflow-hidden">
       {/* ── Top Header ─────────────────────────────────────────── */}
       <header className="h-14 border-b border-slate-800/60 bg-[#0a0f1c]/80 backdrop-blur-xl px-4 flex items-center justify-between shrink-0 z-40 relative">
         <div className="flex items-center gap-3">

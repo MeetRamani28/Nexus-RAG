@@ -155,12 +155,12 @@ export const Sidebar: React.FC<Props> = ({
                   ) : (
                     <>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs truncate leading-none">{conv.title}</p>
+                        <p className={`text-[13px] font-medium truncate leading-tight ${activeId === conv.id ? 'text-blue-50' : 'text-slate-300 group-hover:text-slate-100 transition-colors'}`}>{conv.title}</p>
                         {conv.message_count > 0 && (
-                          <p className="text-[10px] text-slate-500 mt-0.5">{conv.message_count} {conv.message_count === 1 ? "query" : "queries"}</p>
+                          <p className={`text-[10px] mt-0.5 ${activeId === conv.id ? 'text-blue-200/70' : 'text-slate-500'}`}>{conv.message_count} {conv.message_count === 1 ? "query" : "queries"}</p>
                         )}
                       </div>
-                      <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                      <div className="hidden group-hover:flex items-center gap-1 shrink-0 ml-2">
                         <button
                           onClick={e => startEdit(conv, e)}
                           className="p-1 text-slate-600 hover:text-slate-300 rounded-md hover:bg-slate-700/50 transition-all"

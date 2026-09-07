@@ -549,12 +549,13 @@ export const ChatInterface: React.FC<Props> = ({
                 </span>
               </div>
             )}
-            {messages.map((msg) => (
+            {messages.map((msg, idx) => (
               <div
                 key={msg.id}
-                className={`flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300 ${
+                className={`flex gap-3 animate-slide-up ${
                   msg.role === "user" ? "justify-end" : "justify-start"
                 }`}
+                style={{ animationDelay: `${idx * 0.05}s` }}
               >
                 {msg.role === "assistant" && (
                   <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 via-blue-500 to-violet-600 flex items-center justify-center shrink-0 mt-1 shadow-lg shadow-blue-500/25 text-white">
