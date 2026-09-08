@@ -204,8 +204,8 @@ const MainApp: React.FC = () => {
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-              <Layers className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-lg overflow-hidden border border-blue-500/20 shadow-md">
+              <img src="/logo.jpg" alt="Nexus-RAG Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-sm font-bold tracking-tight text-slate-100 leading-none">Nexus-RAG</h1>

@@ -400,8 +400,8 @@ export const ChatInterface: React.FC<Props> = ({
   if (!conversationId) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-full text-center px-6">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 border border-blue-500/20 flex items-center justify-center mb-4 shadow-xl shadow-blue-500/10">
-          <BrainCircuit className="w-8 h-8 text-blue-400" />
+        <div className="w-20 h-20 rounded-3xl overflow-hidden border border-blue-500/20 shadow-2xl shadow-blue-500/10 mb-6">
+          <img src="/logo.jpg" alt="Nexus-RAG Logo" className="w-full h-full object-cover" />
         </div>
         <h2 className="text-2xl font-bold text-slate-100 mb-2">Nexus Intelligence Engine</h2>
         <p className="text-slate-400 text-xs max-w-md leading-relaxed mb-6">
@@ -449,8 +449,8 @@ export const ChatInterface: React.FC<Props> = ({
           <div className="flex flex-col items-center justify-center min-h-full px-6 py-8">
             {/* Header */}
             <div className="text-center mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 border border-blue-500/20 flex items-center justify-center mx-auto mb-3 shadow-xl shadow-blue-500/10">
-                <Sparkles className="w-7 h-7 text-blue-400" />
+              <div className="w-16 h-16 rounded-2xl overflow-hidden border border-blue-500/20 shadow-xl shadow-blue-500/10 mx-auto mb-4">
+                <img src="/logo.jpg" alt="Nexus-RAG Logo" className="w-full h-full object-cover" />
               </div>
               <h3 className="text-2xl font-bold text-slate-100 mb-1.5">Nexus Document Intelligence</h3>
               <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
