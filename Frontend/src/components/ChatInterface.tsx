@@ -797,7 +797,7 @@ export const ChatInterface: React.FC<Props> = ({
               }
               disabled={isInputDisabled}
               rows={1}
-              className="w-full bg-transparent px-4 pt-3.5 pb-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none leading-relaxed max-h-40 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-transparent px-4 pt-3.5 pb-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none leading-relaxed max-h-40 disabled:opacity-50 disabled:cursor-not-allowed no-scrollbar"
             />
 
             {/* Prompt Bar Controls (Model Selector + Attachment + Send Button) */}
