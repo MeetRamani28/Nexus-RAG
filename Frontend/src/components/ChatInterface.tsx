@@ -121,7 +121,7 @@ const processMessageContent = (content: string) => {
   let processed = content;
   
   // Replace fully closed <think>...</think> blocks
-  processed = processed.replace(/<think>([\s\S]*?)<\/think>/gi, (match, p1) => {
+  processed = processed.replace(/<think>([\s\S]*?)<\/think>/gi, (_match, p1) => {
     return `> **🤔 Thinking Process:**\n${p1.trim().split('\n').map((line: string) => `> ${line}`).join('\n')}\n\n`;
   });
   
