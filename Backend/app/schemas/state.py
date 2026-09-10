@@ -18,9 +18,10 @@ class RAGState(TypedDict):
     question: str
     model: Optional[str]
     source_file: Optional[str]
-    documents: List[Document]
-    child_documents: List[Document]
-    reranked_documents: List[Document]
+    documents: List[Any]
+    child_documents: List[Any]
+    reranked_documents: List[Any]
+    web_context: str
     generation: str
     citation_sources: List[Dict[str, Any]]
     error: Optional[str]

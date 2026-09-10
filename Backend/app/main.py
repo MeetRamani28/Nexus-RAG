@@ -361,11 +361,29 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                 "documents": [],
                 "child_documents": [],
                 "reranked_documents": [],
+                "web_context": "",
                 "generation": "",
                 "citation_sources": [],
                 "error": None,
             }
-            final_state = rag_graph.invoke(initial_state)
+            
+            final_state = {}
+            for step in rag_graph.stream(initial_state):
+                for node_name, state_update in step.items():
+                    final_state.update(state_update)
+                    if node_name == "retrieve":
+                        yield {"event": "agent", "data": "Retrieval Agent is searching document vectors..."}
+                    elif node_name == "rerank":
+                        yield {"event": "agent", "data": "Re-Ranking Agent is prioritizing most relevant context..."}
+                    elif node_name == "web_search":
+                        if state_update.get("web_context"):
+                            yield {"event": "agent", "data": "Web Search Agent found live context from DuckDuckGo..."}
+                        else:
+                            yield {"event": "agent", "data": "Web Search Agent bypassed (Document context sufficient)..."}
+                    elif node_name == "generate":
+                        yield {"event": "agent", "data": "Synthesis Agent is drafting final response..."}
+                await asyncio.sleep(0.1)
+
             citations = final_state.get("citation_sources", [])
             generation_text = final_state.get("generation", "No response generated.")
 

@@ -55,9 +55,28 @@ def rerank_node(state: RAGState) -> Dict[str, Any]:
     }
 
 
+from duckduckgo_search import DDGS
+
+def web_search_node(state: RAGState) -> Dict[str, Any]:
+    query = state.get("question", "")
+    reranked_docs = state.get("reranked_documents", [])
+    
+    # If we have strong context from PDF, skip web search
+    if len(reranked_docs) > 0 and len(reranked_docs[0].page_content) > 100:
+        return {"web_context": ""}
+        
+    try:
+        results = DDGS().text(query, max_results=3)
+        web_context = "\n".join([f"[Web] {r['title']}: {r['body']}" for r in results])
+        return {"web_context": web_context}
+    except Exception as e:
+        print(f"[Web Search Error]: {e}")
+        return {"web_context": ""}
+
 def generate_node(state: RAGState) -> Dict[str, Any]:
     query = state.get("question", "")
     reranked_docs = state.get("reranked_documents", [])
+    web_context = state.get("web_context", "")
     
     if not reranked_docs:
         reranked_docs = state.get("documents", [])
@@ -70,6 +89,10 @@ def generate_node(state: RAGState) -> Dict[str, Any]:
          for doc in reranked_docs]
     )
 
+    # Append Web Context if present
+    if web_context:
+        context_str += f"\n\n--- WEB CONTEXT ---\n{web_context}"
+
     # Truncate context to max 6000 chars to stay within Groq token limits
     MAX_CONTEXT_CHARS = 6000
     if len(context_str) > MAX_CONTEXT_CHARS:
@@ -77,8 +100,8 @@ def generate_node(state: RAGState) -> Dict[str, Any]:
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are an expert Enterprise Financial Document Assistant (Nexus-RAG).\n"
-                   "Answer the user's query accurately using ONLY the information provided in the Context below.\n"
-                   "Extract specific monetary values, figures, or dates clearly.\n\n"
+                   "Answer the user's query accurately using the information provided in the Context below.\n"
+                   "If the Context includes Web Search results, incorporate them to provide a complete answer.\n\n"
                    "Context:\n{context}"),
         ("human", "{question}")
     ])
