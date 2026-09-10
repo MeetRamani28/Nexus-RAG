@@ -649,19 +649,19 @@ export const ChatInterface: React.FC<Props> = ({
                             remarkPlugins={[remarkGfm]}
                             components={{
                               code(props) {
-                                const {children, className, node, ...rest} = props
-                                const match = /language-(\w+)/.exec(className || '')
+                                const {children, className, node, ref, ...rest} = props;
+                                const match = /language-(\w+)/.exec(className || '');
                                 return match ? (
                                   <div className="rounded-xl overflow-hidden my-3 border border-slate-800">
                                     <div className="bg-slate-900 px-4 py-1.5 text-xs font-mono text-slate-400 border-b border-slate-800 flex justify-between items-center">
                                       <span>{match[1]}</span>
                                     </div>
                                     <SyntaxHighlighter
-                                      {...rest}
+                                      {...(rest as any)}
                                       PreTag="div"
                                       children={String(children).replace(/\n$/, '')}
                                       language={match[1]}
-                                      style={oneDark}
+                                      style={oneDark as any}
                                       customStyle={{ margin: 0, background: '#020617', padding: '1rem', fontSize: '0.8rem' }}
                                     />
                                   </div>
