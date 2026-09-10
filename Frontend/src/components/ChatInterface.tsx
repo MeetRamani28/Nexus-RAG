@@ -490,7 +490,7 @@ export const ChatInterface: React.FC<Props> = ({
       />
 
       {/* ── Messages Container ───────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar">
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center min-h-full px-6 py-8">
             {/* Header */}
@@ -583,7 +583,7 @@ export const ChatInterface: React.FC<Props> = ({
             </div>
           </div>
         ) : (
-          <div className="px-4 pt-6 pb-6 space-y-6 max-w-3xl mx-auto w-full">
+          <div className="px-2 sm:px-4 pt-6 pb-6 space-y-6 max-w-3xl mx-auto w-full min-w-0">
             <div className="flex items-center justify-between mb-4 gap-4">
               {activeSourceFile ? (
                 <div className="flex-1 flex items-center justify-between px-4 py-2 bg-zinc-900/80 border border-zinc-800/80 rounded-xl text-xs text-zinc-400">
@@ -610,7 +610,7 @@ export const ChatInterface: React.FC<Props> = ({
             {messages.map((msg, idx) => (
               <div
                 key={msg.id}
-                className={`flex gap-3 animate-slide-up ${
+                className={`flex gap-3 min-w-0 animate-slide-up ${
                   msg.role === "user" ? "justify-end" : "justify-start"
                 }`}
                 style={{ animationDelay: `${idx * 0.05}s` }}
@@ -621,7 +621,7 @@ export const ChatInterface: React.FC<Props> = ({
                   </div>
                 )}
 
-                <div className={`group relative max-w-[85%] ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col`}>
+                <div className={`group relative min-w-0 max-w-[85%] ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col`}>
                   {/* Copy Button */}
                   {msg.role === "assistant" && msg.content && (
                     <div className="absolute -top-2.5 right-0 z-10">
@@ -639,7 +639,7 @@ export const ChatInterface: React.FC<Props> = ({
                     {msg.role === "assistant" ? (
                       <>
 
-                        <div className="prose prose-invert prose-sm max-w-none
+                        <div className="prose prose-invert prose-sm max-w-none break-words overflow-x-auto
                           prose-p:leading-relaxed prose-p:my-1.5
                           prose-ul:my-2 prose-li:my-0.5 prose-ul:list-disc prose-ul:pl-5
                           prose-ol:my-2 prose-ol:list-decimal prose-ol:pl-5

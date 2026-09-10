@@ -201,7 +201,7 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
+    <div className="fixed inset-0 flex flex-col bg-zinc-950 text-zinc-100 font-sans overflow-hidden" style={{ touchAction: 'pan-y' }}>
       {/* ── Top Header ─────────────────────────────────────────── */}
       <header className="h-14 border-b border-zinc-800/60 bg-zinc-900/80 backdrop-blur-md px-4 flex items-center justify-between shrink-0 z-40 relative">
         <div className="flex items-center gap-3">
