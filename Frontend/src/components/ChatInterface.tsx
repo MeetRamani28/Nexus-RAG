@@ -48,7 +48,7 @@ const CopyButton: React.FC<{ text: string }> = ({ text }) => {
   return (
     <button
       onClick={handleCopy}
-      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-700/50 transition-all opacity-0 group-hover:opacity-100"
+      className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 transition-all opacity-0 group-hover:opacity-100"
       title="Copy message"
     >
       {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -65,7 +65,7 @@ const AgentPipelineToast: React.FC<{ step: PipelineStep; modelName: string; agen
       title: "Step 1/3: Vector Search",
       desc: "Embedding query & retrieving dense context from Qdrant...",
       icon: FileSearch,
-      color: "text-blue-400 bg-blue-500/10 border-blue-500/30",
+      color: "text-indigo-400 bg-indigo-500/10 border-indigo-500/30",
     },
     reranking: {
       title: "Step 2/3: Cohere Rerank",
@@ -85,27 +85,27 @@ const AgentPipelineToast: React.FC<{ step: PipelineStep; modelName: string; agen
   const Icon = curr.icon;
 
   return (
-    <div className="mx-auto max-w-xl mb-4 p-3.5 rounded-2xl bg-[#0f172a]/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="mx-auto max-w-xl mb-4 p-3.5 rounded-xl bg-zinc-900/95 border border-zinc-800/80 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex items-center gap-3">
         <div className={`p-2.5 rounded-xl border ${curr.color} shrink-0`}>
-          <Icon className="w-4 h-4 animate-pulse" />
+          <Icon className="w-4 h-4 " />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-slate-100">{curr.title}</p>
-            <div className="flex items-center gap-1 text-[10px] text-slate-400">
-              <Loader2 className="w-3 h-3 animate-spin text-blue-400" />
+            <p className="text-xs font-semibold text-zinc-100">{curr.title}</p>
+            <div className="flex items-center gap-1 text-[10px] text-zinc-400">
+              <Loader2 className="w-3 h-3 animate-spin text-indigo-400" />
               <span>Processing</span>
             </div>
           </div>
-          <p className="text-[11px] text-slate-400 truncate mt-0.5">{agentDesc || curr.desc}</p>
+          <p className="text-[11px] text-zinc-400 truncate mt-0.5">{agentDesc || curr.desc}</p>
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="w-full h-1 bg-slate-800 rounded-full mt-2.5 overflow-hidden">
+      <div className="w-full h-1 bg-zinc-800 rounded-full mt-2.5 overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-blue-500 via-violet-500 to-emerald-400 transition-all duration-500"
+          className="h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-emerald-400 transition-all duration-500"
           style={{
             width: step === "retrieving" ? "33%" : step === "reranking" ? "66%" : "95%",
           }}
@@ -446,16 +446,16 @@ export const ChatInterface: React.FC<Props> = ({
   if (!conversationId) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-full text-center px-6">
-        <div className="w-20 h-20 rounded-3xl overflow-hidden border border-blue-500/20 shadow-2xl shadow-blue-500/10 mb-6">
+        <div className="w-20 h-20 rounded-3xl overflow-hidden border border-indigo-500/20 shadow-2xl shadow-indigo-500/10 mb-6">
           <img src="/logo.jpg" alt="Nexus-RAG Logo" className="w-full h-full object-cover" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-100 mb-2">Nexus Intelligence Engine</h2>
-        <p className="text-slate-400 text-xs max-w-md leading-relaxed mb-6">
+        <h2 className="text-2xl font-bold text-zinc-100 mb-2">Nexus Intelligence Engine</h2>
+        <p className="text-zinc-400 text-xs max-w-md leading-relaxed mb-6">
           Select a conversation from the sidebar or start a new chat to analyze PDF documents with Qdrant Vector Search & Cohere Reranking.
         </p>
         <button
           onClick={onNewChat}
-          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-500/25 transition-all flex items-center gap-2 cursor-pointer group"
+          className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-500/25 transition-all flex items-center gap-2 cursor-pointer group"
         >
           <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
           Start New Chat
@@ -467,8 +467,8 @@ export const ChatInterface: React.FC<Props> = ({
   if (isFetchingMessages) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-full text-center px-6">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
-        <p className="text-sm text-slate-400">Loading conversation...</p>
+        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
+        <p className="text-sm text-zinc-400">Loading conversation...</p>
       </div>
     );
   }
@@ -476,7 +476,7 @@ export const ChatInterface: React.FC<Props> = ({
   const isEmpty = messages.length === 0;
 
   return (
-    <div className="flex flex-col h-full bg-[#050811] relative">
+    <div className="flex flex-col h-full bg-zinc-950 relative">
       {/* Hidden File Input */}
       <input
         ref={fileInputRef}
@@ -495,11 +495,11 @@ export const ChatInterface: React.FC<Props> = ({
           <div className="flex flex-col items-center justify-center min-h-full px-6 py-8">
             {/* Header */}
             <div className="text-center mb-6">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden border border-blue-500/20 shadow-xl shadow-blue-500/10 mx-auto mb-4">
+              <div className="w-16 h-16 rounded-xl overflow-hidden border border-indigo-500/20 shadow-xl shadow-indigo-500/10 mx-auto mb-4">
                 <img src="/logo.jpg" alt="Nexus-RAG Logo" className="w-full h-full object-cover" />
               </div>
-              <h3 className="text-2xl font-bold text-slate-100 mb-1.5">Nexus Document Intelligence</h3>
-              <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+              <h3 className="text-2xl font-bold text-zinc-100 mb-1.5">Nexus Document Intelligence</h3>
+              <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
                 {activeSourceFile
                   ? `Active Document: "${activeSourceFile}". Ask any question below to begin retrieval!`
                   : "Upload a PDF to start a fresh analysis session, or select an existing document from your Knowledge Base."}
@@ -508,12 +508,12 @@ export const ChatInterface: React.FC<Props> = ({
 
             {/* If PDF is already attached to this session */}
             {activeSourceFile ? (
-              <div className="w-full max-w-xl mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center animate-in fade-in duration-300">
+              <div className="w-full max-w-xl mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center animate-in fade-in duration-300">
                 <div className="flex items-center justify-center gap-2 text-emerald-400 font-semibold text-sm mb-1">
                   <Check className="w-4 h-4" />
                   <span>Session PDF Ready: {activeSourceFile}</span>
                 </div>
-                <p className="text-xs text-slate-400">You can now ask questions about this document using the prompt bar below.</p>
+                <p className="text-xs text-zinc-400">You can now ask questions about this document using the prompt bar below.</p>
               </div>
             ) : (
               /* Central Drag & Drop PDF Upload Box */
@@ -525,19 +525,19 @@ export const ChatInterface: React.FC<Props> = ({
                     const f = e.dataTransfer.files?.[0];
                     if (f) handlePdfUpload(f);
                   }}
-                  className="flex flex-col items-center justify-center border-2 border-dashed border-slate-700/80 hover:border-blue-500/60 rounded-3xl p-8 cursor-pointer transition-all duration-300 bg-slate-900/40 hover:bg-blue-500/5 group shadow-2xl"
+                  className="flex flex-col items-center justify-center border-2 border-dashed border-zinc-800/80 hover:border-indigo-500/60 rounded-3xl p-8 cursor-pointer transition-all duration-300 bg-zinc-900/40 hover:bg-indigo-500/5 group shadow-2xl"
                 >
-                  <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                    <FileText className="w-6 h-6 text-blue-400" />
+                  <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <FileText className="w-6 h-6 text-indigo-400" />
                   </div>
-                  <p className="text-sm font-semibold text-slate-200 mb-1">
+                  <p className="text-sm font-semibold text-zinc-200 mb-1">
                     {attachedFile ? attachedFile.name : "Drop PDF here or click to browse"}
                   </p>
-                  <p className="text-[11px] text-slate-500">Upload a PDF for this new chat session</p>
+                  <p className="text-[11px] text-zinc-500">Upload a PDF for this new chat session</p>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="mt-4 px-4 py-2 bg-blue-600/90 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="mt-4 px-4 py-2 bg-indigo-600/90 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Select New PDF Document
@@ -546,8 +546,8 @@ export const ChatInterface: React.FC<Props> = ({
 
                 {/* Existing Ingested Docs Selector */}
                 {existingDocs.length > 0 && (
-                  <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 text-left">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                  <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-4 text-left">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-2">
                       Or select a document from Knowledge Base:
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -556,9 +556,9 @@ export const ChatInterface: React.FC<Props> = ({
                           key={doc.filename}
                           type="button"
                           onClick={() => handleAttachExistingDoc(doc.filename)}
-                          className="px-3 py-1.5 bg-slate-800/80 hover:bg-blue-500/10 border border-slate-700/60 hover:border-blue-500/40 rounded-xl text-xs text-slate-300 hover:text-blue-300 transition-all flex items-center gap-1.5 cursor-pointer"
+                          className="px-3 py-1.5 bg-zinc-800/80 hover:bg-indigo-500/10 border border-zinc-800/60 hover:border-indigo-500/40 rounded-xl text-xs text-zinc-300 hover:text-indigo-300 transition-all flex items-center gap-1.5 cursor-pointer"
                         >
-                          <FileText className="w-3.5 h-3.5 text-blue-400" />
+                          <FileText className="w-3.5 h-3.5 text-indigo-400" />
                           <span className="truncate max-w-[180px]">{doc.filename}</span>
                         </button>
                       ))}
@@ -574,10 +574,10 @@ export const ChatInterface: React.FC<Props> = ({
                 <button
                   key={s}
                   onClick={() => sendMessage(s)}
-                  className="p-3.5 bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-blue-500/40 rounded-2xl text-left text-xs text-slate-300 hover:text-slate-100 transition-all duration-200 group flex items-start justify-between shadow-lg shadow-black/20"
+                  className="p-3.5 bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/80 hover:border-indigo-500/40 rounded-xl text-left text-xs text-zinc-300 hover:text-zinc-100 transition-all duration-200 group flex items-start justify-between shadow-lg shadow-black/20"
                 >
                   <span className="line-clamp-2 leading-relaxed">{s}</span>
-                  <Sparkles className="w-3.5 h-3.5 text-slate-600 group-hover:text-blue-400 shrink-0 ml-2 mt-0.5 transition-colors" />
+                  <Sparkles className="w-3.5 h-3.5 text-zinc-600 group-hover:text-indigo-400 shrink-0 ml-2 mt-0.5 transition-colors" />
                 </button>
               ))}
             </div>
@@ -586,10 +586,10 @@ export const ChatInterface: React.FC<Props> = ({
           <div className="px-4 pt-6 pb-6 space-y-6 max-w-3xl mx-auto w-full">
             <div className="flex items-center justify-between mb-4 gap-4">
               {activeSourceFile ? (
-                <div className="flex-1 flex items-center justify-between px-4 py-2 bg-slate-900/80 border border-slate-800/80 rounded-xl text-xs text-slate-400">
+                <div className="flex-1 flex items-center justify-between px-4 py-2 bg-zinc-900/80 border border-zinc-800/80 rounded-xl text-xs text-zinc-400">
                   <div className="flex items-center gap-2 min-w-0">
-                    <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                    <span className="truncate">Session Document: <strong className="text-slate-200">{activeSourceFile}</strong></span>
+                    <FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    <span className="truncate">Session Document: <strong className="text-zinc-200">{activeSourceFile}</strong></span>
                   </div>
                   <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 shrink-0 ml-2 hidden sm:block">
                     Isolated Vector Retrieval
@@ -599,7 +599,7 @@ export const ChatInterface: React.FC<Props> = ({
               {messages.length > 0 && (
                 <button
                   onClick={exportChat}
-                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl transition-colors border border-slate-700/50 hover:border-slate-600"
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-zinc-300 bg-zinc-800/50 hover:bg-zinc-800/50 rounded-xl transition-colors border border-zinc-800/50 hover:border-zinc-600"
                   title="Export Chat to Markdown"
                 >
                   <Download className="w-3.5 h-3.5" />
@@ -616,8 +616,8 @@ export const ChatInterface: React.FC<Props> = ({
                 style={{ animationDelay: `${idx * 0.05}s` }}
               >
                 {msg.role === "assistant" && (
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 via-blue-500 to-violet-600 flex items-center justify-center shrink-0 mt-1 shadow-lg shadow-blue-500/25 text-white">
-                    <Sparkles className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 mt-1 text-zinc-300">
+                    <Sparkles className="w-3.5 h-3.5" />
                   </div>
                 )}
 
@@ -630,10 +630,10 @@ export const ChatInterface: React.FC<Props> = ({
                   )}
 
                   <div
-                    className={`rounded-2xl px-5 py-4 text-sm leading-relaxed ${
+                    className={`rounded-xl px-5 py-4 text-sm leading-relaxed ${
                       msg.role === "user"
-                        ? "bg-blue-600 text-white rounded-br-none shadow-lg shadow-blue-600/20 font-medium"
-                        : "bg-[#0f172a] border border-slate-700/50 text-slate-200 rounded-bl-none shadow-md shadow-black/20"
+                        ? "bg-zinc-800 text-zinc-100 rounded-br-sm border border-zinc-700 font-medium"
+                        : "bg-transparent text-zinc-200"
                     }`}
                   >
                     {msg.role === "assistant" ? (
@@ -643,13 +643,13 @@ export const ChatInterface: React.FC<Props> = ({
                           prose-p:leading-relaxed prose-p:my-1.5
                           prose-ul:my-2 prose-li:my-0.5 prose-ul:list-disc prose-ul:pl-5
                           prose-ol:my-2 prose-ol:list-decimal prose-ol:pl-5
-                          prose-headings:text-slate-100 prose-headings:font-semibold
-                          prose-strong:text-slate-100 prose-strong:font-semibold
-                          prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
-                          prose-table:border-collapse prose-table:w-full prose-td:border prose-td:border-slate-700 prose-td:p-2 prose-th:border prose-th:border-slate-700 prose-th:p-2 prose-th:bg-slate-800
-                          prose-code:text-blue-300 prose-code:bg-slate-800/80 border-slate-700/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+                          prose-headings:text-zinc-100 prose-headings:font-semibold
+                          prose-strong:text-zinc-100 prose-strong:font-semibold
+                          prose-a:text-indigo-400 prose-a:no-underline hover:prose-a:underline
+                          prose-table:border-collapse prose-table:w-full prose-td:border prose-td:border-zinc-800 prose-td:p-2 prose-th:border prose-th:border-zinc-800 prose-th:p-2 prose-th:bg-zinc-900
+                          prose-code:text-zinc-300 prose-code:bg-zinc-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-mono
                           prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0
-                          prose-blockquote:border-l-4 prose-blockquote:border-blue-500/50 prose-blockquote:bg-blue-500/5 prose-blockquote:px-4 prose-blockquote:py-2 prose-blockquote:rounded-r-lg prose-blockquote:text-slate-300 prose-blockquote:my-4 prose-blockquote:text-xs">
+                          prose-blockquote:border-l-2 prose-blockquote:border-zinc-700 prose-blockquote:bg-zinc-900/50 prose-blockquote:px-4 prose-blockquote:py-2 prose-blockquote:rounded-r-lg prose-blockquote:text-zinc-400 prose-blockquote:my-4 prose-blockquote:text-xs">
                           <ReactMarkdown 
                             remarkPlugins={[remarkGfm]}
                             components={{
@@ -657,8 +657,8 @@ export const ChatInterface: React.FC<Props> = ({
                                 const {children, className, node, ref, ...rest} = props;
                                 const match = /language-(\w+)/.exec(className || '');
                                 return match ? (
-                                  <div className="rounded-xl overflow-hidden my-3 border border-slate-800 shadow-md">
-                                    <div className="bg-slate-900 px-4 py-1.5 text-xs font-mono text-slate-400 border-b border-slate-800 flex justify-between items-center">
+                                  <div className="rounded-xl overflow-hidden my-3 border border-zinc-800 shadow-md">
+                                    <div className="bg-zinc-900 px-4 py-1.5 text-xs font-mono text-zinc-400 border-b border-zinc-800 flex justify-between items-center">
                                       <span>{match[1]}</span>
                                     </div>
                                     <SyntaxHighlighter
@@ -686,7 +686,7 @@ export const ChatInterface: React.FC<Props> = ({
                             {[0, 1, 2].map((i) => (
                               <span
                                 key={i}
-                                className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"
+                                className="w-1.5 h-1.5 bg-indigo-400 rounded-full "
                                 style={{ animationDelay: `${i * 150}ms` }}
                               />
                             ))}
@@ -701,7 +701,7 @@ export const ChatInterface: React.FC<Props> = ({
                 </div>
 
                 {msg.role === "user" && (
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/80 flex items-center justify-center shrink-0 mt-1 text-slate-200 shadow-md">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-800 border border-zinc-600/80 flex items-center justify-center shrink-0 mt-1 text-zinc-200 shadow-md">
                     <User className="w-4 h-4" />
                   </div>
                 )}
@@ -724,7 +724,7 @@ export const ChatInterface: React.FC<Props> = ({
       </div>
 
       {/* ── Prominent Input Bar (Antigravity / Gemini Style) ──────────────── */}
-      <div className="shrink-0 px-4 pb-6 sm:pb-4 pt-2 z-20 bg-[#050811]">
+      <div className="shrink-0 px-4 pb-6 sm:pb-4 pt-2 z-20 bg-zinc-950">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
           {/* Lock Notice if no document is present */}
           {!hasDocument && (
@@ -745,14 +745,14 @@ export const ChatInterface: React.FC<Props> = ({
 
           {/* Attached PDF Status Notification if any */}
           {(attachedFile || uploadingPdf || uploadMessage) && (
-            <div className="mb-2 flex items-center justify-between px-3.5 py-2 bg-slate-900/90 border border-slate-800 rounded-xl text-xs">
+            <div className="mb-2 flex items-center justify-between px-3.5 py-2 bg-zinc-900/90 border border-zinc-800 rounded-xl text-xs">
               <div className="flex items-center gap-2 min-w-0">
                 {uploadingPdf ? (
-                  <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin shrink-0" />
+                  <Loader2 className="w-3.5 h-3.5 text-indigo-400 animate-spin shrink-0" />
                 ) : (
-                  <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                 )}
-                <span className="text-slate-300 font-medium truncate">
+                <span className="text-zinc-300 font-medium truncate">
                   {attachedFile?.name || "Uploading..."}
                 </span>
                 {uploadMessage && (
@@ -767,7 +767,7 @@ export const ChatInterface: React.FC<Props> = ({
                   setAttachedFile(null);
                   setUploadMessage(null);
                 }}
-                className="text-slate-500 hover:text-slate-300 p-0.5"
+                className="text-zinc-500 hover:text-zinc-300 p-0.5"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -776,10 +776,10 @@ export const ChatInterface: React.FC<Props> = ({
 
           {/* Input Capsule Box */}
           <div
-            className={`flex flex-col bg-slate-900/90 border rounded-2xl transition-all duration-300 shadow-2xl backdrop-blur-xl ${
+            className={`flex flex-col bg-zinc-900/90 border rounded-xl transition-all duration-300 shadow-2xl backdrop-blur-md ${
               isInputDisabled
-                ? "border-slate-800 opacity-60 bg-slate-950/80"
-                : "border-slate-700/70 hover:border-slate-600 focus-within:border-blue-500/80 focus-within:ring-2 focus-within:ring-blue-500/20"
+                ? "border-zinc-800 opacity-60 bg-zinc-950/80"
+                : "border-zinc-800/70 hover:border-zinc-600 focus-within:border-indigo-500/80 focus-within:ring-2 focus-within:ring-indigo-500/20"
             }`}
           >
             {/* Textarea */}
@@ -797,7 +797,7 @@ export const ChatInterface: React.FC<Props> = ({
               }
               disabled={isInputDisabled}
               rows={1}
-              className="w-full bg-transparent px-4 pt-3.5 pb-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none resize-none leading-relaxed max-h-40 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-transparent px-4 pt-3.5 pb-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none leading-relaxed max-h-40 disabled:opacity-50 disabled:cursor-not-allowed"
             />
 
             {/* Prompt Bar Controls (Model Selector + Attachment + Send Button) */}
@@ -809,11 +809,11 @@ export const ChatInterface: React.FC<Props> = ({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isStreaming || uploadingPdf}
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 border border-slate-800 transition-all flex items-center gap-1 text-xs cursor-pointer disabled:opacity-50"
+                  className="p-2 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 border border-zinc-800 transition-all flex items-center gap-1 text-xs cursor-pointer disabled:opacity-50"
                   title="Upload / Attach PDF Document"
                 >
-                  <Plus className="w-4 h-4 text-blue-400" />
-                  <span className="hidden sm:inline text-[11px] font-medium text-slate-300">PDF</span>
+                  <Plus className="w-4 h-4 text-indigo-400" />
+                  <span className="hidden sm:inline text-[11px] font-medium text-zinc-300">PDF</span>
                 </button>
 
                 {/* Model Selector Dropdown */}
@@ -822,17 +822,17 @@ export const ChatInterface: React.FC<Props> = ({
                     type="button"
                     onClick={() => setModelDropdownOpen((v) => !v)}
                     disabled={isStreaming}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-xs text-slate-200 transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-800/60 text-xs text-zinc-200 transition-all cursor-pointer"
                   >
-                    <Cpu className="w-3.5 h-3.5 text-blue-400" />
+                    <Cpu className="w-3.5 h-3.5 text-indigo-400" />
                     <span className="font-medium">{selectedModelObj.name}</span>
-                    <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
+                    <ChevronDown className="w-3 h-3 text-zinc-400 ml-0.5" />
                   </button>
 
                   {/* Dropdown Menu */}
                   {modelDropdownOpen && (
-                    <div className="absolute bottom-full left-0 mb-2 w-56 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden z-50 p-1.5 animate-in fade-in duration-150">
-                      <div className="px-2 py-1 text-[10px] uppercase tracking-wider font-semibold text-slate-500">
+                    <div className="absolute bottom-full left-0 mb-2 w-56 bg-zinc-900 border border-zinc-800/80 rounded-xl shadow-2xl overflow-hidden z-50 p-1.5 animate-in fade-in duration-150">
+                      <div className="px-2 py-1 text-[10px] uppercase tracking-wider font-semibold text-zinc-500">
                         Select Groq LLM
                       </div>
                       {availableModels.map((m) => (
@@ -845,15 +845,15 @@ export const ChatInterface: React.FC<Props> = ({
                           }}
                           className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
                             selectedModel === m.id
-                              ? "bg-blue-500/15 text-blue-300 font-semibold border border-blue-500/20"
-                              : "text-slate-300 hover:bg-slate-800/80"
+                              ? "bg-indigo-500/15 text-indigo-300 font-semibold border border-indigo-500/20"
+                              : "text-zinc-300 hover:bg-zinc-800/80"
                           }`}
                         >
                           <div>
                             <p className="leading-tight">{m.name}</p>
-                            {m.tag && <p className="text-[10px] text-slate-500 mt-0.5">{m.tag}</p>}
+                            {m.tag && <p className="text-[10px] text-zinc-500 mt-0.5">{m.tag}</p>}
                           </div>
-                          {selectedModel === m.id && <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                          {selectedModel === m.id && <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />}
                         </button>
                       ))}
                     </div>
@@ -865,7 +865,7 @@ export const ChatInterface: React.FC<Props> = ({
               <button
                 type="submit"
                 disabled={!input.trim() || isInputDisabled}
-                className="w-8 h-8 flex items-center justify-center bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-xl transition-all duration-200 cursor-pointer disabled:cursor-not-allowed shadow-lg shadow-blue-500/20 disabled:shadow-none"
+                className="w-8 h-8 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white rounded-xl transition-all duration-200 cursor-pointer disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20 disabled:shadow-none"
                 title="Send query"
               >
                 {isStreaming ? (
@@ -877,8 +877,8 @@ export const ChatInterface: React.FC<Props> = ({
             </div>
           </div>
 
-          <p className="text-center text-[10px] text-slate-600 mt-2">
-            Press <kbd className="bg-slate-900 border border-slate-800 rounded px-1 py-0.5 font-mono text-slate-400">Enter</kbd> to send · <kbd className="bg-slate-900 border border-slate-800 rounded px-1 py-0.5 font-mono text-slate-400">Shift+Enter</kbd> for line breaks
+          <p className="text-center text-[10px] text-zinc-600 mt-2">
+            Press <kbd className="bg-zinc-900 border border-zinc-800 rounded px-1 py-0.5 font-mono text-zinc-400">Enter</kbd> to send · <kbd className="bg-zinc-900 border border-zinc-800 rounded px-1 py-0.5 font-mono text-zinc-400">Shift+Enter</kbd> for line breaks
           </p>
         </form>
       </div>

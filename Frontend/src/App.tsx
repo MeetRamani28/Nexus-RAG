@@ -175,24 +175,24 @@ const MainApp: React.FC = () => {
 
   if (isBackendWakingUp) {
     return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#050811] text-slate-100 font-sans z-50 overflow-hidden">
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-zinc-950 text-zinc-100 font-sans z-50 overflow-hidden">
         {/* Background Gradients */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-[100px] pointer-events-none" />
         
         <div className="flex flex-col items-center justify-center gap-8 z-10 p-6 text-center">
-          <div className="w-20 h-20 rounded-2xl bg-[#0a0f1c]/80 border border-blue-500/20 shadow-[0_0_40px_-10px_rgba(59,130,246,0.3)] flex items-center justify-center relative overflow-hidden group">
-             <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 to-violet-500/10 animate-pulse" />
-             <Layers className="w-10 h-10 text-blue-400 relative z-10 animate-bounce" style={{ animationDuration: '2s' }} />
+          <div className="w-20 h-20 rounded-xl bg-zinc-900/80 border border-indigo-500/20 shadow-md flex items-center justify-center relative overflow-hidden group">
+             <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-violet-500/10 animate-pulse" />
+             <Layers className="w-10 h-10 text-indigo-400 relative z-10 animate-bounce" style={{ animationDuration: '2s' }} />
           </div>
           <div className="space-y-4 max-w-md">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-100">Waking up Intelligence Engine...</h2>
-            <div className="flex flex-col gap-2 text-sm text-slate-400">
+            <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Waking up Intelligence Engine...</h2>
+            <div className="flex flex-col gap-2 text-sm text-zinc-400">
               <p>Since this project is hosted on a free Render instance, the backend sleeps after inactivity.</p>
-              <p className="font-medium text-blue-400/80">Please wait 1-2 minutes for the container to spin up.</p>
+              <p className="font-medium text-indigo-400/80">Please wait 1-2 minutes for the container to spin up.</p>
             </div>
             <div className="flex items-center justify-center mt-6">
-              <div className="w-6 h-6 rounded-full border-2 border-slate-700 border-t-blue-500 animate-spin" />
+              <div className="w-6 h-6 rounded-full border-2 border-zinc-800 border-t-indigo-500 animate-spin" />
             </div>
           </div>
         </div>
@@ -201,13 +201,13 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#050811] text-slate-100 font-sans overflow-hidden">
+    <div className="fixed inset-0 flex flex-col bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
       {/* ── Top Header ─────────────────────────────────────────── */}
-      <header className="h-14 border-b border-slate-800/60 bg-[#0a0f1c]/80 backdrop-blur-xl px-4 flex items-center justify-between shrink-0 z-40 relative">
+      <header className="h-14 border-b border-zinc-800/60 bg-zinc-900/80 backdrop-blur-md px-4 flex items-center justify-between shrink-0 z-40 relative">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen((v) => !v)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors md:hidden"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 transition-colors md:hidden"
             title={sidebarOpen ? "Close Menu" : "Open Menu"}
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -215,33 +215,33 @@ const MainApp: React.FC = () => {
           
           <button
             onClick={() => setSidebarOpen((v) => !v)}
-            className="hidden md:block p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors"
+            className="hidden md:block p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 transition-colors"
             title={sidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
           >
-            {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4 text-blue-400" />}
+            {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4 text-indigo-400" />}
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg overflow-hidden border border-blue-500/20 shadow-md">
+            <div className="w-8 h-8 rounded-lg overflow-hidden border border-indigo-500/20 shadow-md">
               <img src="/logo.jpg" alt="Nexus-RAG Logo" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h1 className="text-sm font-bold tracking-tight text-slate-100 leading-none">Nexus-RAG</h1>
-              <p className="text-[10px] text-slate-400 leading-none mt-0.5 hidden sm:block">Agentic Document Intelligence</p>
+              <h1 className="text-sm font-bold tracking-tight text-zinc-100 leading-none">Nexus-RAG</h1>
+              <p className="text-[10px] text-zinc-400 leading-none mt-0.5 hidden sm:block">Agentic Document Intelligence</p>
             </div>
           </div>
         </div>
 
         {/* System Badges & Auth */}
         <div className="flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800/80 px-2.5 py-1 rounded-lg text-slate-300">
+          <div className="hidden lg:flex items-center gap-1.5 bg-zinc-900/90 border border-zinc-800/80 px-2.5 py-1 rounded-lg text-zinc-300">
             <Database className="w-3.5 h-3.5 text-violet-400" />
-            <span className="text-[11px] font-semibold uppercase text-slate-400">{systemInfo?.vector_provider ?? "QDRANT"}</span>
+            <span className="text-[11px] font-semibold uppercase text-zinc-400">{systemInfo?.vector_provider ?? "QDRANT"}</span>
           </div>
 
-          <div className="hidden lg:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800/80 px-2.5 py-1 rounded-lg text-slate-300">
+          <div className="hidden lg:flex items-center gap-1.5 bg-zinc-900/90 border border-zinc-800/80 px-2.5 py-1 rounded-lg text-zinc-300">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-[11px] text-slate-400">Cohere Rerank</span>
+            <span className="text-[11px] text-zinc-400">Cohere Rerank</span>
           </div>
 
           {systemInfo?.hyde_enabled && (
@@ -251,15 +251,15 @@ const MainApp: React.FC = () => {
             </div>
           )}
 
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-700/50">
+          <div className="flex items-center gap-2 pl-2 border-l border-zinc-800/50">
              <div className="hidden md:flex flex-col items-end mr-1">
-                 <span className="text-xs font-semibold text-slate-200">{user?.firstName || user?.username || 'User'}</span>
-                 <span className="text-[10px] text-slate-500">{user?.primaryEmailAddress?.emailAddress}</span>
+                 <span className="text-xs font-semibold text-zinc-200">{user?.firstName || user?.username || 'User'}</span>
+                 <span className="text-[10px] text-zinc-500">{user?.primaryEmailAddress?.emailAddress}</span>
              </div>
              <UserButton 
                 appearance={{
                   elements: {
-                    userButtonAvatarBox: "w-8 h-8 border-2 border-slate-800"
+                    userButtonAvatarBox: "w-8 h-8 border-2 border-zinc-800"
                   }
                 }}
              />
@@ -301,7 +301,7 @@ const MainApp: React.FC = () => {
         </aside>
 
         {/* Main Chat Interface */}
-        <main className="flex-1 min-w-0 bg-[#050811] flex flex-col h-full overflow-hidden w-full relative z-10">
+        <main className="flex-1 min-w-0 bg-zinc-950 flex flex-col h-full overflow-hidden w-full relative z-10">
           <ChatInterface
             conversationId={activeConversationId}
             onDocUploaded={fetchDocCount}

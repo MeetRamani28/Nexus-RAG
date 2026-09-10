@@ -102,26 +102,26 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
   return (
     <div className="flex flex-col gap-4">
       {/* Upload area */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 backdrop-blur-md shadow-xl">
+      <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-5 backdrop-blur-md shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2.5">
             <div className="p-1.5 bg-sky-500/10 rounded-lg border border-sky-500/20 text-sky-400">
               <Upload className="w-4 h-4" />
             </div>
-            <h2 className="text-sm font-semibold text-slate-100">Upload PDF</h2>
+            <h2 className="text-sm font-semibold text-zinc-100">Upload PDF</h2>
           </div>
         </div>
 
         <label
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
-          className="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-sky-500/50 rounded-xl p-5 cursor-pointer transition-colors bg-slate-950/40"
+          className="flex flex-col items-center justify-center border-2 border-dashed border-zinc-800 hover:border-sky-500/50 rounded-xl p-5 cursor-pointer transition-colors bg-zinc-950/40"
         >
-          <FileText className="w-7 h-7 text-slate-400 mb-2" />
-          <span className="text-sm font-medium text-slate-300 text-center">
+          <FileText className="w-7 h-7 text-zinc-400 mb-2" />
+          <span className="text-sm font-medium text-zinc-300 text-center">
             {file ? file.name : "Click or drag PDF here"}
           </span>
-          <span className="text-xs text-slate-500 mt-1">Multi-page financial & technical PDFs</span>
+          <span className="text-xs text-zinc-500 mt-1">Multi-page financial & technical PDFs</span>
           <input type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
         </label>
 
@@ -139,18 +139,18 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
               <span>{lastResult.duplicate ? "Already Ingested" : `${lastResult.filename} Processed!`}</span>
             </div>
             {!lastResult.duplicate && (
-              <div className="text-slate-400 pl-5">
-                Parents: <strong className="text-slate-200">{lastResult.parent_chunks_created}</strong> | Children: <strong className="text-slate-200">{lastResult.child_chunks_created}</strong>
+              <div className="text-zinc-400 pl-5">
+                Parents: <strong className="text-zinc-200">{lastResult.parent_chunks_created}</strong> | Children: <strong className="text-zinc-200">{lastResult.child_chunks_created}</strong>
               </div>
             )}
-            {lastResult.duplicate && <p className="text-slate-400 pl-5">{lastResult.message}</p>}
+            {lastResult.duplicate && <p className="text-zinc-400 pl-5">{lastResult.message}</p>}
           </div>
         )}
 
         <button
           onClick={handleUpload}
           disabled={!file || loading}
-          className="mt-3 w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-800 disabled:text-slate-500 text-slate-100 rounded-xl font-medium text-sm transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed"
+          className="mt-3 w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-100 rounded-xl font-medium text-sm transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed"
         >
           {loading ? (
             <><Loader2 className="w-4 h-4 animate-spin" /><span>Ingesting...</span></>
@@ -161,31 +161,31 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
       </div>
 
       {/* Ingested documents list */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 backdrop-blur-md shadow-xl">
+      <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-5 backdrop-blur-md shadow-xl">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-100">Ingested Documents</h2>
-          <button onClick={fetchDocuments} className="text-slate-500 hover:text-slate-300 transition-colors" title="Refresh">
+          <h2 className="text-sm font-semibold text-zinc-100">Ingested Documents</h2>
+          <button onClick={fetchDocuments} className="text-zinc-500 hover:text-zinc-300 transition-colors" title="Refresh">
             <RefreshCw className={`w-3.5 h-3.5 ${docsLoading ? "animate-spin" : ""}`} />
           </button>
         </div>
 
         {documents.length === 0 ? (
-          <p className="text-xs text-slate-500 text-center py-3">No documents ingested yet.</p>
+          <p className="text-xs text-zinc-500 text-center py-3">No documents ingested yet.</p>
         ) : (
           <div className="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar">
             {documents.map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between bg-slate-800/50 rounded-lg px-3 py-2 group">
+              <div key={doc.id} className="flex items-center justify-between bg-zinc-800/50 rounded-lg px-3 py-2 group">
                 <div className="flex items-center gap-2 min-w-0">
                   <FileText className="w-3.5 h-3.5 text-sky-400 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-xs text-slate-200 truncate" title={doc.filename}>{doc.filename}</p>
-                    <p className="text-[10px] text-slate-500">{doc.parent_chunks}P · {doc.child_chunks}C chunks</p>
+                    <p className="text-xs text-zinc-200 truncate" title={doc.filename}>{doc.filename}</p>
+                    <p className="text-[10px] text-zinc-500">{doc.parent_chunks}P · {doc.child_chunks}C chunks</p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleDelete(doc.filename)}
                   disabled={deletingFile === doc.filename}
-                  className="shrink-0 ml-2 text-slate-600 hover:text-rose-400 transition-colors disabled:opacity-50"
+                  className="shrink-0 ml-2 text-zinc-600 hover:text-rose-400 transition-colors disabled:opacity-50"
                   title="Remove document"
                 >
                   {deletingFile === doc.filename
