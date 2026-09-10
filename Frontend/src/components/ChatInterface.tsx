@@ -57,7 +57,7 @@ const CopyButton: React.FC<{ text: string }> = ({ text }) => {
 };
 
 // ─── Agent Pipeline Execution Toast ──────────────────────────────────────────
-const AgentPipelineToast: React.FC<{ step: PipelineStep; modelName: string }> = ({ step, modelName }) => {
+const AgentPipelineToast: React.FC<{ step: PipelineStep; modelName: string; agentDesc?: string }> = ({ step, modelName, agentDesc }) => {
   if (step === "idle" || step === "done") return null;
 
   const stepDetails = {
@@ -98,7 +98,7 @@ const AgentPipelineToast: React.FC<{ step: PipelineStep; modelName: string }> = 
               <span>Processing</span>
             </div>
           </div>
-          <p className="text-[11px] text-slate-400 truncate mt-0.5">{curr.desc}</p>
+          <p className="text-[11px] text-slate-400 truncate mt-0.5">{agentDesc || curr.desc}</p>
         </div>
       </div>
 
@@ -328,9 +328,6 @@ export const ChatInterface: React.FC<Props> = ({
     setIsStreaming(true);
     setPipeline("retrieving");
 
-    setTimeout(() => setPipeline((p) => p !== "idle" && p !== "done" ? "reranking" : p), 900);
-    setTimeout(() => setPipeline((p) => p !== "idle" && p !== "done" ? "generating" : p), 1800);
-
     try {
       const res = await fetchAuth(`${API_BASE_URL}/api/v1/query/stream`, {
         method: "POST",
@@ -360,6 +357,10 @@ export const ChatInterface: React.FC<Props> = ({
           try {
             const parsed = JSON.parse(raw);
             if (parsed.agent_step) {
+              if (parsed.agent_step.includes("Retrieval Agent")) setPipeline("retrieving");
+              else if (parsed.agent_step.includes("Re-Ranking Agent")) setPipeline("reranking");
+              else if (parsed.agent_step.includes("Web Search") || parsed.agent_step.includes("Synthesis Agent")) setPipeline("generating");
+
               setMessages((p) =>
                 p.map((m) =>
                   m.id === aid
@@ -617,23 +618,7 @@ export const ChatInterface: React.FC<Props> = ({
                   >
                     {msg.role === "assistant" ? (
                       <>
-                        {/* Multi-Agent Stepper */}
-                        {msg.agentSteps && msg.agentSteps.length > 0 && (
-                          <div className="mb-4 pb-4 border-b border-slate-800/80 space-y-2">
-                            <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase flex items-center gap-1.5 mb-3">
-                              <Cpu className="w-3.5 h-3.5" /> Agentic Pipeline
-                            </p>
-                            {msg.agentSteps.map((step, sIdx) => (
-                              <div key={sIdx} className="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-950/50 rounded-lg px-3 py-1.5 border border-slate-800/50">
-                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                                <span>{step}</span>
-                                {sIdx === msg.agentSteps!.length - 1 && msg.isStreaming && (
-                                  <div className="w-3 h-3 border border-slate-600 border-t-blue-400 rounded-full animate-spin ml-auto" />
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+
                         <div className="prose prose-invert prose-sm max-w-none
                           prose-p:leading-relaxed prose-p:my-1.5
                           prose-ul:my-2 prose-li:my-0.5
@@ -707,7 +692,15 @@ export const ChatInterface: React.FC<Props> = ({
         )}
 
         {/* Floating Agent Execution Toast */}
-        <AgentPipelineToast step={pipeline} modelName={selectedModelObj.name} />
+        <AgentPipelineToast 
+          step={pipeline} 
+          modelName={selectedModelObj.name} 
+          agentDesc={
+            isStreaming && messages.length > 0 
+              ? messages[messages.length - 1].agentSteps?.slice(-1)[0] 
+              : undefined
+          } 
+        />
       </div>
 
       {/* ── Prominent Input Bar (Antigravity / Gemini Style) ──────────────── */}
