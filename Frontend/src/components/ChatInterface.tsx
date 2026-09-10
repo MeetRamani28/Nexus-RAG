@@ -115,6 +115,26 @@ const AgentPipelineToast: React.FC<{ step: PipelineStep; modelName: string; agen
   );
 };
 
+// ─── Process Content to hide/style <think> tags ──────────────────────────────
+const processMessageContent = (content: string) => {
+  if (!content) return "";
+  let processed = content;
+  
+  // Replace fully closed <think>...</think> blocks
+  processed = processed.replace(/<think>([\s\S]*?)<\/think>/gi, (match, p1) => {
+    return `> **🤔 Thinking Process:**\n${p1.trim().split('\n').map((line: string) => `> ${line}`).join('\n')}\n\n`;
+  });
+  
+  // Replace unclosed <think> blocks (during streaming)
+  if (processed.includes("<think>") && !processed.includes("</think>")) {
+    const parts = processed.split("<think>");
+    const thinkContent = parts[1] || "";
+    processed = `${parts[0]}> **🤔 Thinking Process:**\n${thinkContent.trim().split('\n').map((line: string) => `> ${line}`).join('\n')}`;
+  }
+
+  return processed;
+};
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 export const ChatInterface: React.FC<Props> = ({
   conversationId,
@@ -610,10 +630,10 @@ export const ChatInterface: React.FC<Props> = ({
                   )}
 
                   <div
-                    className={`rounded-2xl px-4 py-3.5 text-sm leading-relaxed ${
+                    className={`rounded-2xl px-5 py-4 text-sm leading-relaxed ${
                       msg.role === "user"
                         ? "bg-blue-600 text-white rounded-br-none shadow-lg shadow-blue-600/20 font-medium"
-                        : "bg-slate-900/90 border border-slate-800/90 text-slate-200 rounded-bl-none shadow-xl shadow-black/30"
+                        : "bg-[#0f172a] border border-slate-700/50 text-slate-200 rounded-bl-none shadow-md shadow-black/20"
                     }`}
                   >
                     {msg.role === "assistant" ? (
@@ -621,15 +641,15 @@ export const ChatInterface: React.FC<Props> = ({
 
                         <div className="prose prose-invert prose-sm max-w-none
                           prose-p:leading-relaxed prose-p:my-1.5
-                          prose-ul:my-2 prose-li:my-0.5
-                          prose-ol:my-2
+                          prose-ul:my-2 prose-li:my-0.5 prose-ul:list-disc prose-ul:pl-5
+                          prose-ol:my-2 prose-ol:list-decimal prose-ol:pl-5
                           prose-headings:text-slate-100 prose-headings:font-semibold
                           prose-strong:text-slate-100 prose-strong:font-semibold
                           prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
                           prose-table:border-collapse prose-table:w-full prose-td:border prose-td:border-slate-700 prose-td:p-2 prose-th:border prose-th:border-slate-700 prose-th:p-2 prose-th:bg-slate-800
-                          prose-code:text-blue-300 prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+                          prose-code:text-blue-300 prose-code:bg-slate-800/80 border-slate-700/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
                           prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0
-                          prose-blockquote:border-blue-500/40 prose-blockquote:text-slate-400">
+                          prose-blockquote:border-l-4 prose-blockquote:border-blue-500/50 prose-blockquote:bg-blue-500/5 prose-blockquote:px-4 prose-blockquote:py-2 prose-blockquote:rounded-r-lg prose-blockquote:text-slate-300 prose-blockquote:my-4 prose-blockquote:text-xs">
                           <ReactMarkdown 
                             remarkPlugins={[remarkGfm]}
                             components={{
@@ -637,7 +657,7 @@ export const ChatInterface: React.FC<Props> = ({
                                 const {children, className, node, ref, ...rest} = props;
                                 const match = /language-(\w+)/.exec(className || '');
                                 return match ? (
-                                  <div className="rounded-xl overflow-hidden my-3 border border-slate-800">
+                                  <div className="rounded-xl overflow-hidden my-3 border border-slate-800 shadow-md">
                                     <div className="bg-slate-900 px-4 py-1.5 text-xs font-mono text-slate-400 border-b border-slate-800 flex justify-between items-center">
                                       <span>{match[1]}</span>
                                     </div>
@@ -658,7 +678,7 @@ export const ChatInterface: React.FC<Props> = ({
                               }
                             }}
                           >
-                            {msg.content || ""}
+                            {processMessageContent(msg.content || "")}
                           </ReactMarkdown>
                         </div>
                         {msg.isStreaming && (
