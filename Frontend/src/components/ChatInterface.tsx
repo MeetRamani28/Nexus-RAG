@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Send, User, Loader2, Copy, Check, FileText,
   Sparkles, FileSearch, BrainCircuit, Layers,
-  X, Plus, ChevronDown, Cpu
+  X, Plus, ChevronDown, Cpu, Download
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -239,6 +239,19 @@ export const ChatInterface: React.FC<Props> = ({
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [input]);
 
+  // Export Chat to Markdown
+  const exportChat = () => {
+    if (messages.length === 0) return;
+    const content = messages.map(m => `**${m.role === 'user' ? 'User' : 'Nexus-RAG Agent'}**:\n${m.content}\n\n`).join("---\n\n");
+    const blob = new Blob([content], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `nexus_chat_${new Date().getTime()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Handle PDF Upload via Attachment Button
   const handlePdfUpload = async (file: File) => {
     if (!file.name.endsWith(".pdf")) return;
@@ -346,6 +359,15 @@ export const ChatInterface: React.FC<Props> = ({
           if (raw === "[DONE]") break;
           try {
             const parsed = JSON.parse(raw);
+            if (parsed.agent_step) {
+              setMessages((p) =>
+                p.map((m) =>
+                  m.id === aid
+                    ? { ...m, agentSteps: [...(m.agentSteps || []), parsed.agent_step] }
+                    : m
+                )
+              );
+            }
             if (parsed.citations) {
               cites = parsed.citations;
               setMessages((p) =>
@@ -541,17 +563,29 @@ export const ChatInterface: React.FC<Props> = ({
           </div>
         ) : (
           <div className="px-4 pt-6 pb-6 space-y-6 max-w-3xl mx-auto w-full">
-            {activeSourceFile && (
-              <div className="flex items-center justify-between px-4 py-2 bg-slate-900/80 border border-slate-800/80 rounded-xl text-xs text-slate-400 mb-4">
-                <div className="flex items-center gap-2 min-w-0">
-                  <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                  <span className="truncate">Session Document: <strong className="text-slate-200">{activeSourceFile}</strong></span>
+            <div className="flex items-center justify-between mb-4 gap-4">
+              {activeSourceFile ? (
+                <div className="flex-1 flex items-center justify-between px-4 py-2 bg-slate-900/80 border border-slate-800/80 rounded-xl text-xs text-slate-400">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    <span className="truncate">Session Document: <strong className="text-slate-200">{activeSourceFile}</strong></span>
+                  </div>
+                  <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 shrink-0 ml-2 hidden sm:block">
+                    Isolated Vector Retrieval
+                  </span>
                 </div>
-                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 shrink-0">
-                  Isolated Vector Retrieval
-                </span>
-              </div>
-            )}
+              ) : <div />}
+              {messages.length > 0 && (
+                <button
+                  onClick={exportChat}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl transition-colors border border-slate-700/50 hover:border-slate-600"
+                  title="Export Chat to Markdown"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Export MD</span>
+                </button>
+              )}
+            </div>
             {messages.map((msg, idx) => (
               <div
                 key={msg.id}
@@ -583,6 +617,23 @@ export const ChatInterface: React.FC<Props> = ({
                   >
                     {msg.role === "assistant" ? (
                       <>
+                        {/* Multi-Agent Stepper */}
+                        {msg.agentSteps && msg.agentSteps.length > 0 && (
+                          <div className="mb-4 pb-4 border-b border-slate-800/80 space-y-2">
+                            <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase flex items-center gap-1.5 mb-3">
+                              <Cpu className="w-3.5 h-3.5" /> Agentic Pipeline
+                            </p>
+                            {msg.agentSteps.map((step, sIdx) => (
+                              <div key={sIdx} className="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-950/50 rounded-lg px-3 py-1.5 border border-slate-800/50">
+                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                <span>{step}</span>
+                                {sIdx === msg.agentSteps!.length - 1 && msg.isStreaming && (
+                                  <div className="w-3 h-3 border border-slate-600 border-t-blue-400 rounded-full animate-spin ml-auto" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         <div className="prose prose-invert prose-sm max-w-none
                           prose-p:leading-relaxed prose-p:my-1.5
                           prose-ul:my-2 prose-li:my-0.5

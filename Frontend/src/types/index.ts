@@ -10,6 +10,7 @@ export interface ChatMessage {
   content: string;
   citations?: Citation[];
   isStreaming?: boolean;
+  agentSteps?: string[];
 }
 
 export interface IngestResponse {
