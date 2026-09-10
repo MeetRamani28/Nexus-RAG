@@ -8,10 +8,10 @@
 
 **Upload any PDF. Ask anything. Get cited, real-time AI answers.**
 
-[![Live Demo](https://img.shields.io/badge/??%20Live%20Demo-nexus--rag--rose.vercel.app-6366f1?style=for-the-badge)](https://nexus-rag-rose.vercel.app/)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-nexus--rag--rose.vercel.app-6366f1?style=for-the-badge&logo=vercel&logoColor=white)](https://nexus-rag-rose.vercel.app/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-FF6B35?style=for-the-badge&logo=chainlink&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-FF6B35?style=for-the-badge&logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
 [![Groq](https://img.shields.io/badge/Groq-F55036?style=for-the-badge&logo=groq&logoColor=white)](https://groq.com/)
 [![Qdrant](https://img.shields.io/badge/Qdrant-DC143C?style=for-the-badge&logo=qdrant&logoColor=white)](https://qdrant.tech/)
 
@@ -19,44 +19,44 @@
 
 ---
 
-## ?? Screenshots
+## Screenshots
 
 ### Dashboard
-> Clean entry point — start a new chat or select an existing conversation from the sidebar.
+> Clean entry point - start a new chat or select an existing conversation from the sidebar.
 
 ![Dashboard](Frontend/public/screenshots/01_dashboard.png)
 
 ---
 
-### Document Ready — Knowledge Base Loaded
+### Document Ready - Knowledge Base Loaded
 > After uploading a PDF, the system confirms the document is indexed and ready. Suggested prompts appear automatically.
 
 ![Document Ready](Frontend/public/screenshots/02_document_ready.png)
 
 ---
 
-### PDF Upload — Knowledge Base Selection
-> Drag & drop a new PDF or pick from already-indexed documents in your personal knowledge base.
+### PDF Upload - Knowledge Base Selection
+> Drag and drop a new PDF or pick from already-indexed documents in your personal knowledge base.
 
 ![PDF Upload](Frontend/public/screenshots/05_pdf_upload.png)
 
 ---
 
-### Multi-Agent Pipeline — Live Processing
-> Watch the 4-agent RAG pipeline execute in real-time: Vector Search ? Reranking ? Web Fallback ? Synthesis.
+### Multi-Agent Pipeline - Live Processing
+> Watch the 4-agent RAG pipeline execute in real-time: Vector Search -> Reranking -> Web Fallback -> Synthesis.
 
 ![Agent Processing](Frontend/public/screenshots/03_agent_processing.png)
 
 ---
 
-### AI Response — Rich Markdown with Citations
+### AI Response - Rich Markdown with Citations
 > Responses include structured markdown (tables, bold, bullet points) with source citation badges.
 
 ![AI Response](Frontend/public/screenshots/04_ai_response.png)
 
 ---
 
-### ?? Mobile View
+### Mobile View
 
 | Home Screen | Chat Interface |
 |:-----------:|:--------------:|
@@ -65,79 +65,73 @@
 
 ---
 
-## ??? System Architecture
+## System Architecture
 
 ```
 +------------------------------------------------------------------+
-¦                         USER QUERY                               ¦
-+------------------------------------------------------------------+
-                           ¦
-              +------------?-------------+
-              ¦  Semantic Cache (Redis)  ¦  ?-- Cache HIT ? skip LLM
-              ¦  Cosine Similarity = 95% ¦
-              +--------------------------+
-                    Cache MISS
-                           ¦
-         +-----------------?----------------------+
-         ¦         LangGraph Orchestrator           ¦
-         ¦                                          ¦
-         ¦  +----------+    +-------------------+  ¦
-         ¦  ¦ AGENT 1  ¦    ¦     AGENT 2        ¦  ¦
-         ¦  ¦ Retrieve ¦---?¦  Cohere Rerank v3  ¦  ¦
-         ¦  ¦ (Qdrant) ¦    ¦  Cross-Encoder     ¦  ¦
-         ¦  +----------+    +-------------------+  ¦
-         ¦                            ¦             ¦
-         ¦  +----------+    +---------?---------+  ¦
-         ¦  ¦ AGENT 3  ¦    ¦     AGENT 4        ¦  ¦
-         ¦  ¦ Web      ¦---?¦  Generate (Groq)   ¦  ¦
-         ¦  ¦ Search   ¦    ¦  Llama 3.3 70B     ¦  ¦
-         ¦  +----------+    +-------------------+  ¦
-         +-----------------------------------------+
-                                      ¦
-                       +--------------?-------------+
-                       ¦  SSE Token Streaming        ¦
-                       ¦  React Frontend + Citations  ¦
-                       +----------------------------+
+|                         USER QUERY                               |
++---------------------------+--------------------------------------+
+                            |
+               +------------v-------------+
+               |  Semantic Cache (Redis)  |  <-- Cache HIT -> skip LLM
+               |  Cosine Similarity >= 95%|
+               +------------+-------------+
+                     Cache MISS
+                            |
+          +-----------------v----------------------------------------+
+          |              LangGraph Orchestrator                       |
+          |                                                           |
+          |  [AGENT 1: Retrieve]  -->  [AGENT 2: Cohere Rerank v3]   |
+          |       (Qdrant)                  (Cross-Encoder)           |
+          |                                        |                  |
+          |  [AGENT 3: Web Search]  -->  [AGENT 4: Generate (Groq)]  |
+          |    (DuckDuckGo)                  (Llama 3.3 70B)         |
+          +----------------------------------------------------------+
+                                       |
+                        +--------------v--------------+
+                        |  SSE Token Streaming        |
+                        |  React Frontend + Citations  |
+                        +-----------------------------+
 ```
 
 ---
 
-## ? Key Features
+## Key Features
 
-### ?? Intelligent RAG Pipeline
-- **Parent-Child Chunking** — Large parent chunks (2000 chars) for rich LLM context + small child chunks (400 chars) for high-precision vector search
-- **HyDE (Hypothetical Document Embedding)** — LLM generates a hypothetical answer first, then retrieves by its embedding — dramatically improves recall
-- **Cohere Rerank v3** — Cross-encoder re-scoring after vector retrieval to eliminate noisy context before synthesis
-- **Web Search Fallback** — DuckDuckGo agent activates automatically when document context is insufficient
-- **Semantic Cache** — Repeated queries bypass the LLM entirely (Redis with in-memory fallback) — saves tokens, responds instantly
+### Intelligent RAG Pipeline
+- **Parent-Child Chunking** - Large parent chunks (2000 chars) for rich LLM context + small child chunks (400 chars) for high-precision vector search
+- **HyDE (Hypothetical Document Embedding)** - LLM generates a hypothetical answer first, then retrieves by its embedding for improved recall
+- **Cohere Rerank v3** - Cross-encoder re-scoring after vector retrieval to eliminate noisy context before synthesis
+- **Web Search Fallback** - DuckDuckGo agent activates automatically when document context is insufficient
+- **Semantic Cache** - Repeated queries bypass the LLM entirely (Redis with in-memory fallback) - saves tokens, responds instantly
 
-### ?? Real-time Streaming
-- **Server-Sent Events (SSE)** — Token-by-token response streaming from Groq
-- **Live agent step indicators** — Users see "Vector Search ? Reranking ? Synthesizing..." in real-time
-- **`<think>` block rendering** — DeepSeek/reasoning model chain-of-thought displayed as styled blockquotes
+### Real-time Streaming
+- **Server-Sent Events (SSE)** - Token-by-token response streaming from Groq
+- **Live agent step indicators** - Users see "Vector Search -> Reranking -> Synthesizing..." in real-time
+- **Reasoning block rendering** - DeepSeek model chain-of-thought displayed as styled blockquotes
 
-### ?? Full Chat Experience
-- **Persistent conversations** backed by PostgreSQL — chat history survives reloads
-- **Multi-conversation support** — multiple threads like ChatGPT, with rename & delete
-- **Source citation badges** — click to expand the exact retrieved chunk from the document
-- **Export to Markdown** — download full conversation as `.md` file
-- **Model selector** — switch between Groq models mid-chat
-- **Duplicate detection** — MD5 hash check prevents re-processing the same PDF
+### Full Chat Experience
+- **Persistent conversations** backed by PostgreSQL - chat history survives reloads
+- **Multi-conversation support** - multiple threads like ChatGPT, with rename and delete
+- **Source citation badges** - click to expand the exact retrieved chunk from the document
+- **Export to Markdown** - download full conversation as .md file
+- **Model selector** - switch between Groq models mid-chat
+- **Duplicate detection** - MD5 hash check prevents re-processing the same PDF
 
-### ?? Auth & Security
-- **Clerk JWT authentication** — Google / Email signup
-- **Per-user data isolation** — no cross-user data access
-- **Rate limiting** — 30 queries/min per user via SlowAPI
+### Auth and Security
+- **Clerk JWT authentication** - Google / Email signup
+- **Per-user data isolation** - no cross-user data access
+- **Rate limiting** - 30 queries/min per user via SlowAPI
 
-### ?? UI / UX
-- **Fully responsive** — mobile & desktop
-- **Dark premium design** — Zinc palette
-- **Cold-start loading screen** — graceful handling of Render free-tier spin-up
+### UI and UX
+- **Fully responsive** - mobile and desktop
+- **Dark premium design** - Zinc palette
+- **Cold-start loading screen** - graceful handling of Render free-tier spin-up
 - **Skeleton loaders** for conversation list
 
 ---
 
-## ??? Tech Stack
+## Tech Stack
 
 ### Frontend
 | Technology | Purpose |
@@ -145,22 +139,22 @@
 | React 19 + TypeScript | Core UI framework |
 | Vite 8 | Ultra-fast bundler |
 | Tailwind CSS v4 | Utility-first styling |
-| Clerk Auth | Authentication & user management |
+| Clerk Auth | Authentication and user management |
 | ReactMarkdown + remark-gfm | Rich markdown rendering |
 | react-syntax-highlighter | Code block syntax highlighting |
-| **Vercel** | Hosting & CI/CD |
+| **Vercel** | Hosting and CI/CD |
 
 ### Backend
 | Technology | Purpose |
 |---|---|
 | FastAPI | REST API + SSE streaming |
 | LangGraph | Multi-agent state machine orchestration |
-| LangChain | LLM chains & prompt engineering |
+| LangChain | LLM chains and prompt engineering |
 | Groq API (Llama 3.3 70B) | Ultra-fast LLM inference |
 | Cohere Rerank v3 | Cross-encoder re-ranking |
 | Qdrant | Vector database for semantic search |
 | FastEmbed (all-MiniLM-L6-v2) | Local embedding model |
-| PostgreSQL + SQLAlchemy | Conversations & document metadata |
+| PostgreSQL + SQLAlchemy | Conversations and document metadata |
 | Redis + InMemory fallback | Semantic response caching |
 | SlowAPI | Rate limiting |
 | DuckDuckGo Search | Live web context fallback |
@@ -168,12 +162,12 @@
 
 ---
 
-## ?? Getting Started
+## Getting Started
 
 ### Prerequisites
-- **Python** `3.10+`
-- **Node.js** `v18+`
-- API Keys: [Groq](https://console.groq.com/) · [Cohere](https://cohere.com/) · [Clerk](https://clerk.com/)
+- **Python** 3.10+
+- **Node.js** v18+
+- API Keys: [Groq](https://console.groq.com/) | [Cohere](https://cohere.com/) | [Clerk](https://clerk.com/)
 
 ### 1. Clone
 
@@ -229,30 +223,30 @@ npm run dev
 
 ---
 
-## ?? Project Structure
+## Project Structure
 
 ```
 Nexus-RAG/
-+-- Backend/
-¦   +-- app/
-¦       +-- graph/          # LangGraph state machine & agent nodes
-¦       +-- ingestion/      # PDF loader & parent-child chunking
-¦       +-- retrieval/      # Qdrant vector store & Cohere reranker
-¦       +-- cache/          # Semantic cache (Redis + in-memory fallback)
-¦       +-- core/           # Embeddings, config, auth
-¦       +-- db/             # PostgreSQL models, CRUD, schemas
-¦       +-- main.py         # FastAPI app, SSE endpoints
-+-- Frontend/
-¦   +-- src/
-¦       +-- components/     # ChatInterface, Sidebar, CitationBadge, ...
-¦       +-- App.tsx         # Root layout, auth, routing
-¦       +-- index.css       # Tailwind + typography plugin
-+-- README.md
+â”œâ”€â”€ Backend/
+â”‚   â””â”€â”€ app/
+â”‚       â”œâ”€â”€ graph/          # LangGraph state machine and agent nodes
+â”‚       â”œâ”€â”€ ingestion/      # PDF loader and parent-child chunking
+â”‚       â”œâ”€â”€ retrieval/      # Qdrant vector store and Cohere reranker
+â”‚       â”œâ”€â”€ cache/          # Semantic cache (Redis + in-memory fallback)
+â”‚       â”œâ”€â”€ core/           # Embeddings, config, auth
+â”‚       â”œâ”€â”€ db/             # PostgreSQL models, CRUD, schemas
+â”‚       â””â”€â”€ main.py         # FastAPI app, SSE endpoints
+â”œâ”€â”€ Frontend/
+â”‚   â””â”€â”€ src/
+â”‚       â”œâ”€â”€ components/     # ChatInterface, Sidebar, CitationBadge, ...
+â”‚       â”œâ”€â”€ App.tsx         # Root layout, auth, routing
+â”‚       â””â”€â”€ index.css       # Tailwind + typography plugin
+â””â”€â”€ README.md
 ```
 
 ---
 
-## ????? Author
+## Author
 
 **Meet Ramani**
 
@@ -261,6 +255,6 @@ Nexus-RAG/
 
 ---
 
-## ?? License
+## License
 
 Distributed under the MIT License.
