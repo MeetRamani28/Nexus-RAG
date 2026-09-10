@@ -101,7 +101,8 @@ def generate_node(state: RAGState) -> Dict[str, Any]:
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are an expert Enterprise Financial Document Assistant (Nexus-RAG).\n"
                    "Answer the user's query accurately using the information provided in the Context below.\n"
-                   "If the Context includes Web Search results, incorporate them to provide a complete answer.\n\n"
+                   "If the Context includes Web Search results, incorporate them to provide a complete answer.\n"
+                   "CRITICAL INSTRUCTION: ALWAYS use rich Markdown formatting in your response. Use bullet points for lists, bold text for key metrics or entities, and headers (###) if the answer is long. Make it highly readable and visually appealing.\n\n"
                    "Context:\n{context}"),
         ("human", "{question}")
     ])
