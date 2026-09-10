@@ -5,6 +5,9 @@ import {
   X, Plus, ChevronDown, Cpu
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import type { ChatMessage, Citation, ConversationDetail, IngestResponse, LlmModel } from "../types";
 import { CitationBadge } from "./CitationBadge";
 
@@ -586,10 +589,41 @@ export const ChatInterface: React.FC<Props> = ({
                           prose-ol:my-2
                           prose-headings:text-slate-100 prose-headings:font-semibold
                           prose-strong:text-slate-100 prose-strong:font-semibold
+                          prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
+                          prose-table:border-collapse prose-table:w-full prose-td:border prose-td:border-slate-700 prose-td:p-2 prose-th:border prose-th:border-slate-700 prose-th:p-2 prose-th:bg-slate-800
                           prose-code:text-blue-300 prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
-                          prose-pre:bg-slate-950 prose-pre:border prose-pre:border-slate-800 prose-pre:rounded-xl
+                          prose-pre:bg-transparent prose-pre:p-0 prose-pre:m-0
                           prose-blockquote:border-blue-500/40 prose-blockquote:text-slate-400">
-                          <ReactMarkdown>{msg.content || ""}</ReactMarkdown>
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              code(props) {
+                                const {children, className, node, ...rest} = props
+                                const match = /language-(\w+)/.exec(className || '')
+                                return match ? (
+                                  <div className="rounded-xl overflow-hidden my-3 border border-slate-800">
+                                    <div className="bg-slate-900 px-4 py-1.5 text-xs font-mono text-slate-400 border-b border-slate-800 flex justify-between items-center">
+                                      <span>{match[1]}</span>
+                                    </div>
+                                    <SyntaxHighlighter
+                                      {...rest}
+                                      PreTag="div"
+                                      children={String(children).replace(/\n$/, '')}
+                                      language={match[1]}
+                                      style={oneDark}
+                                      customStyle={{ margin: 0, background: '#020617', padding: '1rem', fontSize: '0.8rem' }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <code {...rest} className={className}>
+                                    {children}
+                                  </code>
+                                )
+                              }
+                            }}
+                          >
+                            {msg.content || ""}
+                          </ReactMarkdown>
                         </div>
                         {msg.isStreaming && (
                           <span className="inline-flex gap-1 ml-1 mt-1">
