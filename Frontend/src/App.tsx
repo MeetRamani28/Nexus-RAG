@@ -17,6 +17,7 @@ const MainApp: React.FC = () => {
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [isBackendWakingUp, setIsBackendWakingUp] = useState(true);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false); // Default false on mobile
   const [docModalOpen, setDocModalOpen] = useState(false);
@@ -29,6 +30,8 @@ const MainApp: React.FC = () => {
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
     }
+    // Disable caching for api calls to prevent fake "awake" responses
+    headers.set("Cache-Control", "no-cache");
     return fetch(url, { ...options, headers });
   }, [getToken]);
 
@@ -45,11 +48,9 @@ const MainApp: React.FC = () => {
             setIsBackendWakingUp(false);
           }
         } else {
-          // If 502 or other error (still waking up), retry in 3 seconds
           if (isMounted) setTimeout(checkHealth, 3000);
         }
       } catch (err) {
-        // If network error (still waking up), retry in 3 seconds
         if (isMounted) setTimeout(checkHealth, 3000);
       }
     };
@@ -78,18 +79,31 @@ const MainApp: React.FC = () => {
 
   // Fetch Conversation List
   const fetchConversations = useCallback(async () => {
-    try {
-      const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations`);
-      if (res.ok) {
-        const list: ConversationListItem[] = await res.json();
-        setConversations(list);
-        if (list.length > 0 && !activeConversationId) {
-          setActiveConversationId(list[0].id);
+    setIsLoadingConversations(true);
+    let retries = 3;
+    const tryFetch = async () => {
+      try {
+        const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations`);
+        if (res.ok) {
+          const list: ConversationListItem[] = await res.json();
+          setConversations(list);
+          if (list.length > 0 && !activeConversationId) {
+            setActiveConversationId(list[0].id);
+          }
+          setIsLoadingConversations(false);
+        } else {
+          throw new Error("Failed to fetch");
+        }
+      } catch (e) {
+        if (retries > 0) {
+          retries--;
+          setTimeout(tryFetch, 2000);
+        } else {
+          setIsLoadingConversations(false);
         }
       }
-    } catch {
-      // ignore
-    }
+    };
+    tryFetch();
   }, [fetchAuth, activeConversationId]);
 
   useEffect(() => {
@@ -282,6 +296,7 @@ const MainApp: React.FC = () => {
               if (window.innerWidth < 768) setSidebarOpen(false);
             }}
             fetchAuth={fetchAuth}
+            isLoading={isLoadingConversations}
           />
         </aside>
 

@@ -17,6 +17,7 @@ interface Props {
   onRename: (id: string, title: string) => void;
   onOpenDocs: () => void;
   fetchAuth?: (url: string, options?: RequestInit) => Promise<Response>;
+  isLoading?: boolean;
 }
 
 function relativeLabel(dateStr: string): string {
@@ -42,7 +43,7 @@ function groupConversations(list: ConversationListItem[]) {
 
 export const Sidebar: React.FC<Props> = ({
   conversations, activeId, docCount,
-  onNewChat, onSelect, onDelete, onRename, onOpenDocs, fetchAuth = fetch
+  onNewChat, onSelect, onDelete, onRename, onOpenDocs, fetchAuth = fetch, isLoading = false
 }) => {
   const [search, setSearch] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
@@ -106,8 +107,20 @@ export const Sidebar: React.FC<Props> = ({
 
       {/* Conversation List */}
       <div className="flex-1 overflow-y-auto no-scrollbar px-2 pb-2">
-        {conversations.length === 0 ? (
-          <div className="text-center py-8 px-4">
+        {isLoading ? (
+          <div className="flex flex-col gap-2 mt-4 px-2">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="flex items-center gap-3 w-full animate-pulse">
+                <div className="w-8 h-8 rounded-xl bg-slate-800/60 shrink-0" />
+                <div className="flex flex-col gap-1.5 flex-1">
+                  <div className="h-3.5 bg-slate-800/60 rounded-md w-3/4" />
+                  <div className="h-2.5 bg-slate-800/40 rounded-md w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : conversations.length === 0 ? (
+          <div className="text-center py-8 px-4 animate-in fade-in">
             <MessageSquare className="w-8 h-8 text-slate-700 mx-auto mb-2" />
             <p className="text-xs text-slate-600">No conversations yet</p>
             <p className="text-[11px] text-slate-700 mt-1">Click New Chat to begin</p>
