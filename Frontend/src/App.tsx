@@ -71,8 +71,10 @@ const MainApp: React.FC = () => {
   }, [fetchAuth]);
 
   useEffect(() => {
-    fetchDocCount();
-  }, [fetchDocCount]);
+    if (!isBackendWakingUp) {
+      fetchDocCount();
+    }
+  }, [fetchDocCount, isBackendWakingUp]);
 
   // Fetch Conversation List
   const fetchConversations = useCallback(async () => {
@@ -91,8 +93,10 @@ const MainApp: React.FC = () => {
   }, [fetchAuth, activeConversationId]);
 
   useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
+    if (!isBackendWakingUp) {
+      fetchConversations();
+    }
+  }, [fetchConversations, isBackendWakingUp]);
 
   // Handle screen resize to show/hide sidebar automatically on desktop
   useEffect(() => {
