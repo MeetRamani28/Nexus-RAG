@@ -1,17 +1,17 @@
 import React from 'react';
 import { SignIn, SignUp } from '@clerk/clerk-react';
-import { Layers } from 'lucide-react';
+
 
 export const AuthPage: React.FC<{ mode: 'signin' | 'signup' }> = ({ mode }) => {
   return (
     <div className="flex flex-col h-screen w-screen bg-zinc-950 text-zinc-100 font-sans overflow-hidden items-center justify-center">
-      <div className="mb-8 flex flex-col items-center gap-3">
-        <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-          <Layers className="w-6 h-6" />
+      <div className="mb-6 flex flex-col items-center gap-2.5 z-10">
+        <div className="w-14 h-14 rounded-2xl overflow-hidden border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+          <img src="/logo.jpg" alt="Nexus-RAG Logo" className="w-full h-full object-cover" />
         </div>
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-tight text-zinc-100">Nexus-RAG</h1>
-          <p className="text-sm text-zinc-400 mt-1">Agentic Document Intelligence</p>
+          <p className="text-xs text-zinc-400 mt-0.5">Agentic Document Intelligence</p>
         </div>
       </div>
       
