@@ -315,6 +315,11 @@ const MainApp: React.FC = () => {
         </div>
       </header>
 
+      {/* Universal Top Progress Line when fetching data */}
+      {isLoadingConversations && (
+        <div className="h-0.5 w-full bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500 animate-pulse shrink-0 z-50" />
+      )}
+
       {/* ── Body Layout ────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden relative">
         {/* Mobile Backdrop */}
