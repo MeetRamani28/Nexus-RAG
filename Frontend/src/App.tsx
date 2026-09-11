@@ -6,9 +6,9 @@ import { Sidebar } from "./components/Sidebar";
 import { ChatInterface } from "./components/ChatInterface";
 import { DocumentModal } from "./components/DocumentModal";
 import type { ConversationListItem, SystemInfoResponse } from "./types";
-import { SignedIn, SignedOut, useAuth, useUser, UserButton } from "@clerk/clerk-react";
+import { SignedIn, SignedOut, ClerkLoaded, ClerkLoading, useAuth, useUser, UserButton } from "@clerk/clerk-react";
 import { AuthPage } from "./components/AuthPage";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -23,6 +23,14 @@ const MainApp: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false); // Default false on mobile
   const [docModalOpen, setDocModalOpen] = useState(false);
   const [docCount, setDocCount] = useState(0);
+
+  // Show login toast on mount
+  useEffect(() => {
+    if (user) {
+      const name = user.firstName || user.username || user.primaryEmailAddress?.emailAddress || "User";
+      toast.success(`Logged in successfully! Welcome back, ${name}.`);
+    }
+  }, [user]);
 
   // Authenticated Fetch wrapper
   const fetchAuth = useCallback(async (url: string, options: RequestInit = {}) => {
@@ -132,31 +140,58 @@ const MainApp: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Create New Chat
+  // Create New Chat (Instant & Optimistic)
   const handleNewChat = async () => {
+    // If active conversation is already empty, just select it instantly
+    const activeConv = conversations.find((c) => c.id === activeConversationId);
+    if (activeConv && activeConv.message_count === 0 && !activeConv.source_file) {
+      if (window.innerWidth < 768) setSidebarOpen(false);
+      toast.info("Already on new chat");
+      return;
+    }
+
+    const tempId = `conv-${Date.now()}`;
+    const tempConv: ConversationListItem = {
+      id: tempId,
+      title: "New Conversation",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      message_count: 0,
+      source_file: undefined,
+    };
+
+    setConversations((prev) => [tempConv, ...prev]);
+    setActiveConversationId(tempId);
+    if (window.innerWidth < 768) setSidebarOpen(false);
+    toast.success("New chat created");
+
     try {
       const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: "New Conversation" }),
       });
-      const newConv: ConversationListItem = await res.json();
-      setConversations((prev) => [newConv, ...prev]);
-      setActiveConversationId(newConv.id);
-      if (window.innerWidth < 768) setSidebarOpen(false);
+      if (res.ok) {
+        const realConv: ConversationListItem = await res.json();
+        setConversations((prev) =>
+          prev.map((c) => (c.id === tempId ? realConv : c))
+        );
+        setActiveConversationId((current) => (current === tempId ? realConv.id : current));
+      }
     } catch {
-      // ignore
+      // Keep optimistic conv in case of offline/transient error
     }
   };
 
   const handleDeleteConversation = async (id: string) => {
     try {
-      await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`, { method: "DELETE" });
       setConversations((prev) => prev.filter((c) => c.id !== id));
       if (activeConversationId === id) {
         const remaining = conversations.filter((c) => c.id !== id);
         setActiveConversationId(remaining.length > 0 ? remaining[0].id : null);
       }
+      toast.success("Conversation deleted");
+      await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`, { method: "DELETE" });
     } catch {
       // ignore
     }
@@ -166,6 +201,7 @@ const MainApp: React.FC = () => {
     setConversations((prev) =>
       prev.map((c) => (c.id === id ? { ...c, title } : c))
     );
+    toast.success("Conversation renamed");
   };
 
   const selectConversation = (id: string) => {
@@ -343,12 +379,25 @@ export const App: React.FC = () => {
           },
         }}
       />
-      <SignedIn>
-        <MainApp />
-      </SignedIn>
-      <SignedOut>
-        <AuthPage mode="signin" />
-      </SignedOut>
+      <ClerkLoading>
+        <div className="flex flex-col h-screen w-screen bg-zinc-950 text-zinc-100 font-sans items-center justify-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <Layers className="w-6 h-6 animate-pulse" />
+          </div>
+          <div className="flex items-center gap-2 text-sm text-zinc-400">
+            <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <span>Authenticating with Nexus Engine...</span>
+          </div>
+        </div>
+      </ClerkLoading>
+      <ClerkLoaded>
+        <SignedIn>
+          <MainApp />
+        </SignedIn>
+        <SignedOut>
+          <AuthPage mode="signin" />
+        </SignedOut>
+      </ClerkLoaded>
     </>
   );
 };

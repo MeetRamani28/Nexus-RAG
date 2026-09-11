@@ -522,9 +522,20 @@ export const ChatInterface: React.FC<Props> = ({
 
   if (isFetchingMessages) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center h-full text-center px-6">
-        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
-        <p className="text-sm text-zinc-400">Loading conversation...</p>
+      <div className="flex-1 flex flex-col h-full bg-zinc-950 p-6 space-y-6 max-w-3xl mx-auto w-full">
+        <div className="h-1 w-full bg-gradient-to-r from-indigo-500/20 via-indigo-500 to-indigo-500/20 animate-pulse rounded-full" />
+        <div className="space-y-4 animate-pulse pt-8">
+          <div className="flex justify-end">
+            <div className="h-10 w-2/3 bg-zinc-900 border border-zinc-800 rounded-2xl" />
+          </div>
+          <div className="flex gap-3 items-start">
+            <div className="w-8 h-8 rounded-lg bg-zinc-800 shrink-0" />
+            <div className="space-y-2 flex-1">
+              <div className="h-4 w-3/4 bg-zinc-900 rounded" />
+              <div className="h-4 w-1/2 bg-zinc-900/60 rounded" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

@@ -80,7 +80,7 @@ export const Sidebar: React.FC<Props> = ({
       <div className="p-3 border-b border-zinc-800/40">
         <button
           onClick={onNewChat}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:scale-[1.01] active:scale-[0.99]"
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           New Chat
@@ -98,7 +98,7 @@ export const Sidebar: React.FC<Props> = ({
             className="flex-1 bg-transparent text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="text-zinc-500 hover:text-zinc-300">
+            <button onClick={() => setSearch("")} className="text-zinc-500 hover:text-zinc-300 cursor-pointer">
               <X className="w-3 h-3" />
             </button>
           )}
@@ -158,10 +158,10 @@ export const Sidebar: React.FC<Props> = ({
                         }}
                         className="flex-1 bg-zinc-800/80 text-zinc-100 text-xs rounded-lg px-2 py-1 border border-zinc-600 focus:outline-none focus:border-indigo-500 min-w-0"
                       />
-                      <button onClick={e => commitEdit(conv.id, e)} className="text-emerald-400 hover:text-emerald-300 p-0.5">
+                      <button onClick={e => commitEdit(conv.id, e)} className="text-emerald-400 hover:text-emerald-300 p-0.5 cursor-pointer">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={e => { e.stopPropagation(); setEditId(null); }} className="text-zinc-500 hover:text-zinc-300 p-0.5">
+                      <button onClick={e => { e.stopPropagation(); setEditId(null); }} className="text-zinc-500 hover:text-zinc-300 p-0.5 cursor-pointer">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -176,13 +176,13 @@ export const Sidebar: React.FC<Props> = ({
                       <div className="hidden group-hover:flex items-center gap-1 shrink-0 ml-2">
                         <button
                           onClick={e => startEdit(conv, e)}
-                          className="p-1 text-zinc-600 hover:text-zinc-300 rounded-md hover:bg-zinc-800/50 transition-all"
+                          className="p-1 text-zinc-600 hover:text-zinc-300 rounded-md hover:bg-zinc-800/50 transition-all cursor-pointer"
                         >
                           <Edit2 className="w-3 h-3" />
                         </button>
                         <button
                           onClick={e => { e.stopPropagation(); onDelete(conv.id); }}
-                          className="p-1 text-zinc-600 hover:text-rose-400 rounded-md hover:bg-rose-500/10 transition-all"
+                          className="p-1 text-zinc-600 hover:text-rose-400 rounded-md hover:bg-rose-500/10 transition-all cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
@@ -200,7 +200,7 @@ export const Sidebar: React.FC<Props> = ({
       <div className="border-t border-zinc-800/40 p-3">
         <button
           onClick={onOpenDocs}
-          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-zinc-800/30 hover:bg-zinc-800/60 border border-zinc-800/30 hover:border-zinc-800/60 transition-all group"
+          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-zinc-800/30 hover:bg-zinc-800/60 border border-zinc-800/30 hover:border-zinc-800/60 transition-all group cursor-pointer"
         >
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
