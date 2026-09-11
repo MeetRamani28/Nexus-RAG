@@ -1,0 +1,15 @@
+﻿name: Render Backend Keep-Alive Cron
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend
+        run: |
+          curl -s -I 'https://nexus-rag-backend.onrender.com/' || echo 'Ping sent'
+
