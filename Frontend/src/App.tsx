@@ -37,12 +37,53 @@ const UniversalSplashScreen: React.FC<{ title?: string; subtitle?: string }> = (
 const MainApp: React.FC = () => {
   const { getToken } = useAuth();
   const { user } = useUser();
-  const [conversations, setConversations] = useState<ConversationListItem[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [isBackendWakingUp, setIsBackendWakingUp] = useState(true);
-  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+
+  // Instant LocalStorage Caching
+  const [conversations, setConversations] = useState<ConversationListItem[]>(() => {
+    try {
+      const cached = localStorage.getItem("nexus_cached_conversations");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem("nexus_cached_active_id") || null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Save to LocalStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem("nexus_cached_conversations", JSON.stringify(conversations));
+    } catch {}
+  }, [conversations]);
+
+  useEffect(() => {
+    try {
+      if (activeConversationId) {
+        localStorage.setItem("nexus_cached_active_id", activeConversationId);
+      }
+    } catch {}
+  }, [activeConversationId]);
+
+  // If cached conversations exist, open App UI immediately (don't block with waking up screen)
+  const [isBackendWakingUp, setIsBackendWakingUp] = useState(() => {
+    try {
+      const cached = localStorage.getItem("nexus_cached_conversations");
+      return !cached || JSON.parse(cached).length === 0;
+    } catch {
+      return true;
+    }
+  });
+
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Default false on mobile
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [docModalOpen, setDocModalOpen] = useState(false);
   const [docCount, setDocCount] = useState(0);
 
