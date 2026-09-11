@@ -164,16 +164,19 @@ export const ChatInterface: React.FC<Props> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch Available Models
+  // Fetch Available Models from Groq via backend — shows only live models
   useEffect(() => {
     fetchAuth(`${API_BASE_URL}/api/v1/models`)
       .then((r) => r.json())
       .then((data: LlmModel[]) => {
         if (data && data.length > 0) {
           setAvailableModels(data);
+          // If currently selected model is not in the live list, auto-switch to first available
+          const ids = data.map((m) => m.id);
+          setSelectedModel((prev) => (ids.includes(prev) ? prev : data[0].id));
         }
       })
-      .catch(() => {});
+      .catch(() => {}); // Silently fallback to DEFAULT_MODELS
   }, [fetchAuth]);
 
   // Close model dropdown on outside click
@@ -414,6 +417,34 @@ export const ChatInterface: React.FC<Props> = ({
               );
             }
             if (parsed.token) {
+              // Detect model_not_found error inside stream token
+              const tokenText: string = parsed.token;
+              const isModelError =
+                tokenText.includes("model_not_found") ||
+                tokenText.includes("does not exist") ||
+                (tokenText.includes("Error code: 404") && tokenText.includes("model"));
+
+              if (isModelError) {
+                // Auto-refresh model list and switch to first available
+                fetchAuth(`${API_BASE_URL}/api/v1/models`)
+                  .then((r) => r.json())
+                  .then((freshModels: LlmModel[]) => {
+                    if (freshModels && freshModels.length > 0) {
+                      setAvailableModels(freshModels);
+                      setSelectedModel(freshModels[0].id);
+                      toast.error(
+                        `⚠️ Model not available. Auto-switched to "${freshModels[0].name}". Please try your question again.`,
+                        { duration: 8000 }
+                      );
+                    } else {
+                      toast.error("⚠️ Selected model is not available. Please select another model from the dropdown.", { duration: 8000 });
+                    }
+                  })
+                  .catch(() => {
+                    toast.error("⚠️ Selected model is not available. Please select another model from the dropdown.", { duration: 8000 });
+                  });
+              }
+
               if (!started) {
                 setPipeline("done");
                 started = true;
@@ -866,9 +897,13 @@ export const ChatInterface: React.FC<Props> = ({
 
                   {/* Dropdown Menu */}
                   {modelDropdownOpen && (
-                    <div className="absolute bottom-full left-0 mb-2 w-56 bg-zinc-900 border border-zinc-800/80 rounded-xl shadow-2xl overflow-hidden z-50 p-1.5 animate-in fade-in duration-150">
-                      <div className="px-2 py-1 text-[10px] uppercase tracking-wider font-semibold text-zinc-500">
-                        Select Groq LLM
+                    <div className="absolute bottom-full left-0 mb-2 w-60 bg-zinc-900 border border-zinc-800/80 rounded-xl shadow-2xl overflow-hidden z-50 p-1.5 animate-in fade-in duration-150">
+                      <div className="px-2 py-1.5 flex items-center justify-between">
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-zinc-500">Live Groq Models</span>
+                        <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
+                          Active
+                        </span>
                       </div>
                       {availableModels.map((m) => (
                         <button
