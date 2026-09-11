@@ -56,6 +56,14 @@
 
 ---
 
+### Mobile View - Fully Responsive
+
+| Mobile Chat Response | Mobile Sidebar Navigation |
+|:--------------------:|:-------------------------:|
+| <img src="Frontend/public/screenshots/mobile_chat.jpeg" width="300" style="border-radius: 12px;" /> | <img src="Frontend/public/screenshots/mobile_sidebar.jpeg" width="300" style="border-radius: 12px;" /> |
+
+---
+
 ## System Architecture
 
 ```
