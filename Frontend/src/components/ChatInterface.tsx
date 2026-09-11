@@ -211,7 +211,7 @@ export const ChatInterface: React.FC<Props> = ({
 
   const [isFetchingMessages, setIsFetchingMessages] = useState(false);
 
-  // Load Messages for active conversation with instant LocalStorage cache
+  // Load Messages for active conversation
   const loadMessages = useCallback(async (id: string) => {
     if (id.startsWith("conv-")) {
       setMessages([]);
@@ -219,45 +219,29 @@ export const ChatInterface: React.FC<Props> = ({
       setIsFetchingMessages(false);
       return;
     }
-
-    // Instantly load from localStorage cache first for 0ms load
-    try {
-      const cached = localStorage.getItem(`nexus_msgs_${id}`);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        setMessages(parsed.messages || []);
-        setActiveSourceFile(parsed.source_file || null);
-      }
-    } catch {}
-
     setIsFetchingMessages(true);
     try {
       const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`);
       if (!res.ok) {
+        setMessages([]);
+        setActiveSourceFile(null);
         setIsFetchingMessages(false);
         return;
       }
       const data: ConversationDetail = await res.json();
-      const loadedMsgs: ChatMessage[] = data.messages.map((m) => ({
-        id: m.id,
-        role: m.role as "user" | "assistant",
-        content: m.content,
-        citations: m.citations as Citation[],
-        isStreaming: false,
-      }));
-
       setActiveSourceFile(data.source_file || null);
-      setMessages(loadedMsgs);
-
-      // Save to localStorage
-      try {
-        localStorage.setItem(
-          `nexus_msgs_${id}`,
-          JSON.stringify({ messages: loadedMsgs, source_file: data.source_file })
-        );
-      } catch {}
+      setMessages(
+        data.messages.map((m) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          citations: m.citations as Citation[],
+          isStreaming: false,
+        }))
+      );
     } catch {
-      // Keep cached messages on network error
+      setMessages([]);
+      setActiveSourceFile(null);
     } finally {
       setIsFetchingMessages(false);
     }

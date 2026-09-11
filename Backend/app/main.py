@@ -4,7 +4,7 @@ import asyncio
 import tempfile
 from typing import List, Optional
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -146,7 +146,8 @@ def get_system_info():
 # ─── Conversations ────────────────────────────────────────────────────────────
 
 @app.get("/api/v1/conversations", response_model=List[ConversationListItem])
-def list_conversations(db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+def list_conversations(response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    response.headers["Cache-Control"] = "private, max-age=15, stale-while-revalidate=60"
     convs = crud.list_conversations(db, user_id)
     result = []
     for c in convs:
@@ -179,7 +180,8 @@ def create_conversation(payload: ConversationCreate, db: Session = Depends(get_d
 
 
 @app.get("/api/v1/conversations/{conversation_id}", response_model=ConversationDetail)
-def get_conversation(conversation_id: str, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+def get_conversation(conversation_id: str, response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    response.headers["Cache-Control"] = "private, max-age=15, stale-while-revalidate=60"
     conv = crud.get_conversation(db, conversation_id, user_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
