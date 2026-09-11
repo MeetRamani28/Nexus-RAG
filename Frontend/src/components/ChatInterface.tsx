@@ -10,6 +10,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import type { ChatMessage, Citation, ConversationDetail, IngestResponse, LlmModel } from "../types";
 import { CitationBadge } from "./CitationBadge";
+import { toast } from "sonner";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -348,6 +349,15 @@ export const ChatInterface: React.FC<Props> = ({
     setIsStreaming(true);
     setPipeline("retrieving");
 
+    // Show a cold-start warning after 5s if still waiting
+    let coldStartToastId: string | number | undefined;
+    const coldStartTimer = setTimeout(() => {
+      coldStartToastId = toast.loading(
+        "⏳ Backend is waking up from sleep mode... Please wait 1-2 minutes for Render cold start.",
+        { duration: 120000 }
+      );
+    }, 5000);
+
     try {
       const res = await fetchAuth(`${API_BASE_URL}/api/v1/query/stream`, {
         method: "POST",
@@ -359,6 +369,14 @@ export const ChatInterface: React.FC<Props> = ({
           model: selectedModel,
         }),
       });
+
+      // Backend responded — dismiss cold start toast
+      clearTimeout(coldStartTimer);
+      if (coldStartToastId !== undefined) {
+        toast.dismiss(coldStartToastId);
+        toast.success("Backend is ready!", { duration: 2000 });
+      }
+
       if (!res.body) throw new Error("No stream");
 
       const reader = res.body.getReader();
@@ -410,14 +428,21 @@ export const ChatInterface: React.FC<Props> = ({
         }
       }
     } catch {
+      clearTimeout(coldStartTimer);
+      if (coldStartToastId !== undefined) toast.dismiss(coldStartToastId);
+      toast.error(
+        "Cannot reach backend. If this is your first visit, please wait 1-2 minutes for the server to wake up and try again.",
+        { duration: 8000 }
+      );
       setMessages((p) =>
         p.map((m) =>
           m.id === aid
-            ? { ...m, content: "Connection error. Please check backend server." }
+            ? { ...m, content: "⚠️ Connection error. The backend server may be waking up from sleep mode. Please wait 1-2 minutes and try again." }
             : m
         )
       );
     } finally {
+      clearTimeout(coldStartTimer);
       setPipeline("idle");
       setIsStreaming(false);
       setMessages((p) =>
@@ -584,22 +609,32 @@ export const ChatInterface: React.FC<Props> = ({
           </div>
         ) : (
           <div className="px-2 sm:px-4 pt-6 pb-6 space-y-6 max-w-3xl mx-auto w-full min-w-0">
-            <div className="flex items-center justify-between mb-4 gap-4">
+            <div className="flex items-center gap-2 mb-4">
               {activeSourceFile ? (
-                <div className="flex-1 flex items-center justify-between px-4 py-2 bg-zinc-900/80 border border-zinc-800/80 rounded-xl text-xs text-zinc-400">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    <span className="truncate">Session Document: <strong className="text-zinc-200">{activeSourceFile}</strong></span>
-                  </div>
-                  <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 shrink-0 ml-2 hidden sm:block">
-                    Isolated Vector Retrieval
-                  </span>
-                </div>
-              ) : <div />}
-              {messages.length > 0 && (
                 <button
                   onClick={exportChat}
-                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-zinc-300 bg-zinc-800/50 hover:bg-zinc-800/50 rounded-xl transition-colors border border-zinc-800/50 hover:border-zinc-600"
+                  title="Click to Export Chat as Markdown"
+                  className="flex-1 flex items-center justify-between px-3 py-2 bg-zinc-900/80 border border-zinc-800/80 hover:border-indigo-500/40 rounded-xl text-xs text-zinc-400 hover:text-zinc-200 transition-all group cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    <span className="truncate">
+                      Session Document: <strong className="text-zinc-200">{activeSourceFile}</strong>
+                    </span>
+                    <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 shrink-0 hidden sm:block">
+                      Isolated Vector Retrieval
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 ml-2 text-zinc-500 group-hover:text-indigo-400 transition-colors">
+                    <Download className="w-3.5 h-3.5" />
+                    <span className="text-[11px] font-medium hidden sm:inline">Export MD</span>
+                  </div>
+                </button>
+              ) : <div />}
+              {messages.length > 0 && !activeSourceFile && (
+                <button
+                  onClick={exportChat}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-zinc-300 bg-zinc-800/50 hover:bg-zinc-800 rounded-xl transition-colors border border-zinc-800/50 hover:border-zinc-600"
                   title="Export Chat to Markdown"
                 >
                   <Download className="w-3.5 h-3.5" />

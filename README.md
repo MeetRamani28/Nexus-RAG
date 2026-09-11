@@ -56,15 +56,6 @@
 
 ---
 
-### Mobile View
-
-| Home Screen | Chat Interface |
-|:-----------:|:--------------:|
-| *(screenshot coming soon)* | *(screenshot coming soon)* |
-| *Responsive sidebar & layout on mobile* | *Full markdown response on small screen* |
-
----
-
 ## System Architecture
 
 ```

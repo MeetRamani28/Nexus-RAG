@@ -8,6 +8,7 @@ import { DocumentModal } from "./components/DocumentModal";
 import type { ConversationListItem, SystemInfoResponse } from "./types";
 import { SignedIn, SignedOut, useAuth, useUser, UserButton } from "@clerk/clerk-react";
 import { AuthPage } from "./components/AuthPage";
+import { Toaster } from "sonner";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -35,7 +36,12 @@ const MainApp: React.FC = () => {
     return fetch(url, { ...options, headers });
   }, [getToken]);
 
-  // Fetch System Info & Health Check
+  // Silent early ping — fires immediately on page load to wake Render before user types
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/v1/system/info`, { method: "GET", cache: "no-store" }).catch(() => {});
+  }, []);
+
+  // Fetch System Info & Health Check (with retry loop)
   useEffect(() => {
     let isMounted = true;
     const checkHealth = async () => {
@@ -326,6 +332,17 @@ const MainApp: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <>
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: "#18181b",
+            border: "1px solid #3f3f46",
+            color: "#f4f4f5",
+            fontSize: "13px",
+          },
+        }}
+      />
       <SignedIn>
         <MainApp />
       </SignedIn>
