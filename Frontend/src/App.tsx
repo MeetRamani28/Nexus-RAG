@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Database, Zap, ShieldCheck, PanelLeftClose, PanelLeftOpen, Layers, Menu, X
+  Database, Zap, ShieldCheck, PanelLeftClose, PanelLeftOpen, Menu, X
 } from "lucide-react";
 import { Sidebar } from "./components/Sidebar";
 import { ChatInterface } from "./components/ChatInterface";
@@ -11,6 +11,28 @@ import { AuthPage } from "./components/AuthPage";
 import { Toaster, toast } from "sonner";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
+// Universal Single Splash Screen for pure consistent loading experience
+const UniversalSplashScreen: React.FC<{ title?: string; subtitle?: string }> = ({
+  title = "Nexus Intelligence Engine",
+  subtitle = "Connecting backend services...",
+}) => (
+  <div className="fixed inset-0 flex flex-col items-center justify-center bg-zinc-950 text-zinc-100 font-sans z-50 overflow-hidden">
+    <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
+    <div className="flex flex-col items-center justify-center gap-5 z-10 p-6 text-center max-w-sm">
+      <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-2xl flex items-center justify-center overflow-hidden relative">
+        <img src="/logo.jpg" alt="Nexus-RAG Logo" className="w-full h-full object-cover" />
+      </div>
+      <div className="space-y-1.5">
+        <h2 className="text-base font-bold tracking-tight text-zinc-100">{title}</h2>
+        <p className="text-xs text-zinc-400 leading-relaxed">{subtitle}</p>
+      </div>
+      <div className="w-36 h-1 bg-zinc-900 rounded-full overflow-hidden mt-2 border border-zinc-800/50">
+        <div className="h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500 animate-pulse w-full" />
+      </div>
+    </div>
+  </div>
+);
 
 const MainApp: React.FC = () => {
   const { getToken } = useAuth();
@@ -24,13 +46,15 @@ const MainApp: React.FC = () => {
   const [docModalOpen, setDocModalOpen] = useState(false);
   const [docCount, setDocCount] = useState(0);
 
-  // Show login toast on mount
+  // Show login toast ONLY AFTER backend is awake and app is fully ready
+  const hasToastedRef = React.useRef(false);
   useEffect(() => {
-    if (user) {
+    if (user && !isBackendWakingUp && !hasToastedRef.current) {
+      hasToastedRef.current = true;
       const name = user.firstName || user.username || user.primaryEmailAddress?.emailAddress || "User";
       toast.success(`Logged in successfully! Welcome back, ${name}.`);
     }
-  }, [user]);
+  }, [user, isBackendWakingUp]);
 
   // Authenticated Fetch wrapper
   const fetchAuth = useCallback(async (url: string, options: RequestInit = {}) => {
@@ -217,28 +241,10 @@ const MainApp: React.FC = () => {
 
   if (isBackendWakingUp) {
     return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center bg-zinc-950 text-zinc-100 font-sans z-50 overflow-hidden">
-        {/* Background Gradients */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-[100px] pointer-events-none" />
-        
-        <div className="flex flex-col items-center justify-center gap-8 z-10 p-6 text-center">
-          <div className="w-20 h-20 rounded-xl bg-zinc-900/80 border border-indigo-500/20 shadow-md flex items-center justify-center relative overflow-hidden group">
-             <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-violet-500/10 animate-pulse" />
-             <Layers className="w-10 h-10 text-indigo-400 relative z-10 animate-bounce" style={{ animationDuration: '2s' }} />
-          </div>
-          <div className="space-y-4 max-w-md">
-            <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Waking up Intelligence Engine...</h2>
-            <div className="flex flex-col gap-2 text-sm text-zinc-400">
-              <p>Since this project is hosted on a free Render instance, the backend sleeps after inactivity.</p>
-              <p className="font-medium text-indigo-400/80">Please wait 1-2 minutes for the container to spin up.</p>
-            </div>
-            <div className="flex items-center justify-center mt-6">
-              <div className="w-6 h-6 rounded-full border-2 border-zinc-800 border-t-indigo-500 animate-spin" />
-            </div>
-          </div>
-        </div>
-      </div>
+      <UniversalSplashScreen
+        title="Waking up Intelligence Engine..."
+        subtitle="Since this project is hosted on Render free tier, please wait 1-2 min while container spins up."
+      />
     );
   }
 
@@ -380,15 +386,10 @@ export const App: React.FC = () => {
         }}
       />
       <ClerkLoading>
-        <div className="flex flex-col h-screen w-screen bg-zinc-950 text-zinc-100 font-sans items-center justify-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-            <Layers className="w-6 h-6 animate-pulse" />
-          </div>
-          <div className="flex items-center gap-2 text-sm text-zinc-400">
-            <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            <span>Authenticating with Nexus Engine...</span>
-          </div>
-        </div>
+        <UniversalSplashScreen
+          title="Authenticating with Nexus Engine..."
+          subtitle="Verifying credentials & initializing workspace..."
+        />
       </ClerkLoading>
       <ClerkLoaded>
         <SignedIn>

@@ -213,6 +213,12 @@ export const ChatInterface: React.FC<Props> = ({
 
   // Load Messages for active conversation
   const loadMessages = useCallback(async (id: string) => {
+    if (id.startsWith("conv-")) {
+      setMessages([]);
+      setActiveSourceFile(null);
+      setIsFetchingMessages(false);
+      return;
+    }
     setIsFetchingMessages(true);
     try {
       const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`);
@@ -520,30 +526,14 @@ export const ChatInterface: React.FC<Props> = ({
     );
   }
 
-  if (isFetchingMessages) {
-    return (
-      <div className="flex-1 flex flex-col h-full bg-zinc-950 p-6 space-y-6 max-w-3xl mx-auto w-full">
-        <div className="h-1 w-full bg-gradient-to-r from-indigo-500/20 via-indigo-500 to-indigo-500/20 animate-pulse rounded-full" />
-        <div className="space-y-4 animate-pulse pt-8">
-          <div className="flex justify-end">
-            <div className="h-10 w-2/3 bg-zinc-900 border border-zinc-800 rounded-2xl" />
-          </div>
-          <div className="flex gap-3 items-start">
-            <div className="w-8 h-8 rounded-lg bg-zinc-800 shrink-0" />
-            <div className="space-y-2 flex-1">
-              <div className="h-4 w-3/4 bg-zinc-900 rounded" />
-              <div className="h-4 w-1/2 bg-zinc-900/60 rounded" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const isEmpty = messages.length === 0;
 
   return (
     <div className="flex flex-col h-full bg-zinc-950 relative">
+      {/* Top progress bar when switching existing conversations */}
+      {isFetchingMessages && (
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500 animate-pulse z-50" />
+      )}
       {/* Hidden File Input */}
       <input
         ref={fileInputRef}
