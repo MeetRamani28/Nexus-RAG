@@ -25,8 +25,8 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 class RedisSemanticCache:
     """
     Semantic Cache layer backed by Redis with InMemory fallback.
-    Caches query embeddings & LLM responses to bypass external API calls
-    when incoming queries have cosine similarity > threshold (default 0.95).
+    Caches query embeddings & LLM responses scoped by user_id and doc_id for Multi-tenant isolation.
+    Key pattern: `nexus_cache:{user_id}:{doc_id}:{hash}`
     """
 
     def __init__(self, redis_url: str = None, similarity_threshold: float = None):
@@ -54,9 +54,11 @@ class RedisSemanticCache:
             print(f"[Redis Cache Warning]: Could not connect to Redis ({e}). Using InMemory fallback.")
             self.client = None
 
-    def get_cached_response(self, query: str) -> Optional[Tuple[str, List[Dict[str, Any]], float]]:
+    def get_cached_response(
+        self, query: str, user_id: str = "default_user", doc_id: str = "all"
+    ) -> Optional[Tuple[str, List[Dict[str, Any]], float]]:
         """
-        Checks Redis (or InMemory) for semantic cache hit.
+        Checks Redis (or InMemory) for semantic cache hit strictly scoped to user_id and doc_id.
         Returns Tuple of (cached_answer, citation_sources, similarity_score) if hit (> threshold), else None.
         """
         try:
@@ -65,8 +67,10 @@ class RedisSemanticCache:
             highest_similarity = -1.0
             best_cached_data = None
 
+            search_pattern = f"nexus_cache:{user_id}:{doc_id}:*"
+
             if self.client:
-                cache_keys = self.client.keys("nexus_rag:cache:*")
+                cache_keys = self.client.keys(search_pattern)
                 for key in cache_keys:
                     raw_data = self.client.get(key)
                     if raw_data:
@@ -79,24 +83,26 @@ class RedisSemanticCache:
                                 best_match_key = key
                                 best_cached_data = cached_item
             else:
+                prefix = f"nexus_cache:{user_id}:{doc_id}:"
                 for key, cached_item in self._in_memory_cache.items():
-                    cached_vector = cached_item.get("embedding", [])
-                    if cached_vector:
-                        sim = cosine_similarity(query_vector, cached_vector)
-                        if sim > highest_similarity:
-                            highest_similarity = sim
-                            best_match_key = key
-                            best_cached_data = cached_item
+                    if key.startswith(prefix):
+                        cached_vector = cached_item.get("embedding", [])
+                        if cached_vector:
+                            sim = cosine_similarity(query_vector, cached_vector)
+                            if sim > highest_similarity:
+                                highest_similarity = sim
+                                best_match_key = key
+                                best_cached_data = cached_item
 
             if highest_similarity >= self.similarity_threshold and best_cached_data:
-                print(f"[Semantic Cache HIT]: Similarity {highest_similarity:.4f} >= {self.similarity_threshold} for query: '{query}'")
+                print(f"[Semantic Cache HIT]: User '{user_id}' Doc '{doc_id}' Sim {highest_similarity:.4f} >= {self.similarity_threshold} for query: '{query}'")
                 return (
                     best_cached_data.get("generation", ""),
                     best_cached_data.get("citation_sources", []),
                     highest_similarity
                 )
 
-            print(f"[Semantic Cache MISS]: Max similarity {highest_similarity:.4f} < {self.similarity_threshold}")
+            print(f"[Semantic Cache MISS]: User '{user_id}' Doc '{doc_id}' Max sim {highest_similarity:.4f} < {self.similarity_threshold}")
             return None
 
         except Exception as e:
@@ -104,16 +110,24 @@ class RedisSemanticCache:
             return None
 
     def set_cached_response(
-        self, query: str, generation: str, citation_sources: List[Dict[str, Any]], ttl_seconds: int = 86400
+        self,
+        query: str,
+        generation: str,
+        citation_sources: List[Dict[str, Any]],
+        user_id: str = "default_user",
+        doc_id: str = "all",
+        ttl_seconds: int = 86400
     ) -> None:
         """
-        Caches a query, its embedding vector, answer generation, and citations.
+        Caches a query, its embedding vector, answer generation, and citations scoped by user_id & doc_id.
         """
         try:
             query_vector = self.embeddings.embed_query(query)
-            cache_id = f"nexus_rag:cache:{uuid.uuid4().hex[:12]}"
+            cache_id = f"nexus_cache:{user_id}:{doc_id}:{uuid.uuid4().hex[:12]}"
             payload = {
                 "query": query,
+                "user_id": user_id,
+                "doc_id": doc_id,
                 "embedding": query_vector,
                 "generation": generation,
                 "citation_sources": citation_sources
@@ -122,6 +136,6 @@ class RedisSemanticCache:
                 self.client.set(cache_id, json.dumps(payload), ex=ttl_seconds)
             else:
                 self._in_memory_cache[cache_id] = payload
-            print(f"[Semantic Cache SET]: Cached response for query: '{query}'")
+            print(f"[Semantic Cache SET]: Cached response for User '{user_id}' Doc '{doc_id}' Key '{cache_id}'")
         except Exception as e:
             print(f"[Semantic Cache Write Error]: {e}")

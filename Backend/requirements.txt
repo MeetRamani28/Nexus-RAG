@@ -8,7 +8,6 @@ langchain-core
 langchain-community
 langgraph
 langchain-groq
-
 cohere
 langchain-cohere
 fastembed
@@ -26,3 +25,8 @@ slowapi
 aiofiles
 PyJWT
 duckduckgo-search
+numpy
+tenacity
+requests
+pytest
+pytest-asyncio

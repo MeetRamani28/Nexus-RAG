@@ -1,19 +1,24 @@
-﻿import uuid
+import uuid
 import hashlib
 from typing import List, Tuple
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
+MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024  # 25MB Limit
 
 def compute_file_hash(file_bytes: bytes) -> str:
     """Returns MD5 hex digest of file bytes for duplicate detection."""
     return hashlib.md5(file_bytes).hexdigest()
 
+def validate_file_size(file_bytes: bytes) -> bool:
+    """Checks if file exceeds maximum 25MB limit."""
+    return len(file_bytes) <= MAX_FILE_SIZE_BYTES
+
 
 class PDFIngestionEngine:
     """
-    Handles PDF loading and Parent-Child Chunking strategy.
+    Handles PDF loading, scanned PDF detection, and Parent-Child Chunking strategy.
     Optimised for financial tables & dense documents.
     """
 
@@ -35,9 +40,18 @@ class PDFIngestionEngine:
         )
 
     def load_pdf(self, file_path: str) -> List[Document]:
-        """Loads raw text pages from a PDF file using PyPDFLoader."""
+        """Loads raw text pages from a PDF file using PyPDFLoader and validates text content."""
         loader = PyPDFLoader(file_path)
-        return loader.load()
+        docs = loader.load()
+
+        total_text_length = sum(len(d.page_content.strip()) for d in docs)
+        if total_text_length < 20 and len(docs) > 0:
+            print(f"[PDF Processor Warning]: Scanned image PDF detected for '{file_path}'. Low selectable text.")
+            for i, d in enumerate(docs):
+                if not d.page_content.strip():
+                    d.page_content = f"[Scanned Page {i+1}]: Image PDF with no extractable text. High-precision extraction requires OCR."
+
+        return docs
 
     def create_parent_child_chunks(
         self, documents: List[Document], filename: str
@@ -46,7 +60,11 @@ class PDFIngestionEngine:
         parent_docs: List[Document] = []
         child_docs: List[Document] = []
 
-        raw_parents = self.parent_splitter.split_documents(documents)
+        valid_docs = [d for d in documents if d.page_content and len(d.page_content.strip()) > 0]
+        if not valid_docs:
+            valid_docs = documents
+
+        raw_parents = self.parent_splitter.split_documents(valid_docs)
 
         for parent in raw_parents:
             parent_id = f"{filename}_parent_{uuid.uuid4().hex[:8]}"

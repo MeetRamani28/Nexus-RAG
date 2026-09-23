@@ -10,9 +10,10 @@
 *.db
 *.db-shm
 *.db-wal
+*.db-journal
 
 # ========================
-# PYTHON
+# PYTHON & TESTING
 # ========================
 __pycache__/
 *.py[cod]
@@ -24,6 +25,7 @@ __pycache__/
 dist/
 build/
 .eggs/
+.pytest_cache/
 
 # Virtual environments
 .venv/
@@ -78,11 +80,7 @@ logs/
 tmp/
 temp/
 
-# ========================
-# TEST / SAMPLE FILES
-# (remove if you want to commit these)
-# ========================
-sample_financial_report.pdf
-tech_company_annual_report_2025.pdf
-generate_sample_pdf.py
-generate_test_pdf.py
+# PDF & test sample files
+*.pdf
+Backend/evals/test_hybrid.py
+

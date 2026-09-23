@@ -1,10 +1,11 @@
 import os
 import json
-from typing import List, Dict, Optional
-from langchain_qdrant import QdrantVectorStore as LangChainQdrant
+import uuid
+from typing import List, Dict, Optional, Any
 from langchain_core.documents import Document
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
+from fastembed import SparseTextEmbedding
 
 from app.retrieval.base import VectorStoreInterface
 from app.core.embeddings import get_embeddings
@@ -16,43 +17,67 @@ os.makedirs(STORAGE_DIR, exist_ok=True)
 
 class QdrantVectorStore(VectorStoreInterface):
     """
-    Qdrant implementation of VectorStoreInterface.
-    Manages Dense Vector Storage (Qdrant Disk Persistence/Cloud) and Parent-Child retrieval using Postgres.
+    Qdrant implementation of VectorStoreInterface supporting Hybrid Search
+    (FastEmbed BM25 Sparse + Cohere Dense + Reciprocal Rank Fusion) and Multi-Tenant Isolation.
     """
 
-    def __init__(self, collection_name: str = "nexus_rag_cohere"):
+    def __init__(self, collection_name: str = "nexus_rag_hybrid"):
         self.collection_name = collection_name
         self.embeddings = get_embeddings()
         
+        print("[QdrantVectorStore]: Initializing FastEmbed Sparse BM25 model...")
+        self.sparse_embeddings = SparseTextEmbedding("Qdrant/bm25")
+
         qdrant_url = os.getenv("QDRANT_URL", "").strip()
         qdrant_api_key = os.getenv("QDRANT_API_KEY", "").strip()
 
         if qdrant_url and not qdrant_url.startswith("http://localhost"):
-            print(f"[QdrantVectorStore]: Connecting to Qdrant Cloud/Remote instance at {qdrant_url}")
+            print(f"[QdrantVectorStore]: Connecting to Qdrant Remote at {qdrant_url}")
             self.client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key if qdrant_api_key else None)
         else:
             print("[QdrantVectorStore]: Using local persistent disk storage.")
             self.client = QdrantClient(path=os.path.join(STORAGE_DIR, "qdrant_db"))
 
-        self.vector_db = None
         self._ensure_collection_exists()
 
     def _ensure_collection_exists(self):
-        collections = self.client.get_collections().collections
-        exists = any(c.name == self.collection_name for c in collections)
-        
-        if not exists:
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=models.VectorParams(
-                    size=1024,
-                    distance=models.Distance.COSINE
+        try:
+            collections = self.client.get_collections().collections
+            exists = any(c.name == self.collection_name for c in collections)
+            
+            if not exists:
+                print(f"[QdrantVectorStore]: Creating collection '{self.collection_name}' with dense + sparse vector configurations...")
+                self.client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config={
+                        "dense": models.VectorParams(
+                            size=1024,
+                            distance=models.Distance.COSINE
+                        )
+                    },
+                    sparse_vectors_config={
+                        "sparse": models.SparseVectorParams(
+                            index=models.SparseIndexParams(on_disk=False)
+                        )
+                    }
                 )
-            )
+
+            # Ensure Payload Indexes for filtered search (source_file, user_id, doc_id)
+            for field in ["source_file", "user_id", "doc_id"]:
+                try:
+                    self.client.create_payload_index(
+                        collection_name=self.collection_name,
+                        field_name=field,
+                        field_schema=models.PayloadSchemaType.KEYWORD
+                    )
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"[Qdrant Collection Warning]: {e}")
 
     def store_documents(self, parent_docs: List[Document], child_docs: List[Document], user_id: str) -> None:
         """
-        Stores Parent docs in PostgreSQL DB and embeds Child docs in Qdrant Storage.
+        Stores Parent docs in PostgreSQL DB and embeds Child docs (Dense + Sparse BM25) in Qdrant Storage.
         """
         db = SessionLocal()
         try:
@@ -71,46 +96,137 @@ class QdrantVectorStore(VectorStoreInterface):
 
         self._ensure_collection_exists()
 
-        self.vector_db = LangChainQdrant(
-            client=self.client,
-            collection_name=self.collection_name,
-            embedding=self.embeddings,
-        )
-        self.vector_db.add_documents(documents=child_docs)
+        if not child_docs:
+            return
 
-    def search_child_and_fetch_parents(
-        self, query: str, top_k: int = 10, source_file: Optional[str] = None
-    ) -> List[Document]:
-        """
-        Performs similarity search on Child chunks, strictly filtered by source_file if provided.
-        Returns parent documents retrieved from PostgreSQL.
-        """
-        if self.vector_db is None:
-            self.vector_db = LangChainQdrant(
-                client=self.client,
-                collection_name=self.collection_name,
-                embedding=self.embeddings,
+        texts = [c.page_content for c in child_docs]
+        
+        dense_vectors = self.embeddings.embed_documents(texts)
+        sparse_vectors = list(self.sparse_embeddings.embed(texts))
+
+        points = []
+        for c_doc, d_vec, s_vec in zip(child_docs, dense_vectors, sparse_vectors):
+            point_id = str(uuid.uuid4())
+            payload = {
+                "page_content": c_doc.page_content,
+                "user_id": user_id,
+                "doc_id": c_doc.metadata.get("source_file"),
+                **c_doc.metadata
+            }
+            points.append(
+                models.PointStruct(
+                    id=point_id,
+                    vector={
+                        "dense": d_vec,
+                        "sparse": models.SparseVector(
+                            indices=s_vec.indices.tolist(),
+                            values=s_vec.values.tolist()
+                        )
+                    },
+                    payload=payload
+                )
             )
 
-        matched_children = []
+        batch_size = 100
+        for i in range(0, len(points), batch_size):
+            batch = points[i : i + batch_size]
+            self.client.upsert(collection_name=self.collection_name, points=batch)
+        print(f"[QdrantVectorStore]: Successfully stored {len(points)} child chunks (dense + sparse BM25) for user '{user_id}'.")
+
+    def search_child_and_fetch_parents(
+        self, query: str, top_k: int = 10, source_file: Optional[str] = None, user_id: Optional[str] = None, search_mode: Optional[str] = None
+    ) -> List[Document]:
+        """
+        Performs similarity search on Child chunks with filtering by source_file and/or user_id (Multi-Tenant Isolation).
+        Supports search_mode: 'dense', 'sparse', 'hybrid' (defaulting to RETRIEVAL_SEARCH_MODE env var or 'hybrid').
+        Ranks candidates using Reciprocal Rank Fusion (RRF) in hybrid mode.
+        """
+        mode = search_mode or os.getenv("RETRIEVAL_SEARCH_MODE", "hybrid").lower()
+        fetch_limit = top_k * 3
+
+        must_conditions = []
+        if user_id:
+            must_conditions.append(models.FieldCondition(key="user_id", match=models.MatchValue(value=user_id)))
+        if source_file:
+            must_conditions.append(models.FieldCondition(key="source_file", match=models.MatchValue(value=source_file)))
+        
+        query_filter = models.Filter(must=must_conditions) if must_conditions else None
+
+        matched_points = []
         try:
-            fetch_k = top_k * 3 if source_file else top_k
-            matched_children = self.vector_db.similarity_search(query, k=fetch_k)
-            if source_file:
-                matched_children = [
-                    c for c in matched_children if c.metadata.get("source_file") == source_file
-                ]
-                matched_children = matched_children[:top_k]
+            if mode == "dense":
+                dense_q = self.embeddings.embed_query(query)
+                matched_points = self.client.query_points(
+                    collection_name=self.collection_name,
+                    query=dense_q,
+                    using="dense",
+                    query_filter=query_filter,
+                    limit=fetch_limit
+                ).points
+                
+            elif mode == "sparse":
+                s_q_vec = list(self.sparse_embeddings.embed([query]))[0]
+                sparse_q = models.SparseVector(
+                    indices=s_q_vec.indices.tolist(),
+                    values=s_q_vec.values.tolist()
+                )
+                matched_points = self.client.query_points(
+                    collection_name=self.collection_name,
+                    query=sparse_q,
+                    using="sparse",
+                    query_filter=query_filter,
+                    limit=fetch_limit
+                ).points
+                
+            else:  # Hybrid mode (RRF)
+                dense_q = self.embeddings.embed_query(query)
+                dense_pts = self.client.query_points(
+                    collection_name=self.collection_name,
+                    query=dense_q,
+                    using="dense",
+                    query_filter=query_filter,
+                    limit=fetch_limit
+                ).points
+
+                s_q_vec = list(self.sparse_embeddings.embed([query]))[0]
+                sparse_q = models.SparseVector(
+                    indices=s_q_vec.indices.tolist(),
+                    values=s_q_vec.values.tolist()
+                )
+                sparse_pts = self.client.query_points(
+                    collection_name=self.collection_name,
+                    query=sparse_q,
+                    using="sparse",
+                    query_filter=query_filter,
+                    limit=fetch_limit
+                ).points
+
+                # Reciprocal Rank Fusion (RRF)
+                rrf_scores: Dict[str, float] = {}
+                point_map: Dict[str, Any] = {}
+
+                for rank, pt in enumerate(dense_pts, start=1):
+                    rrf_scores[pt.id] = rrf_scores.get(pt.id, 0.0) + (1.0 / (60.0 + rank))
+                    point_map[pt.id] = pt
+
+                for rank, pt in enumerate(sparse_pts, start=1):
+                    rrf_scores[pt.id] = rrf_scores.get(pt.id, 0.0) + (1.0 / (60.0 + rank))
+                    point_map[pt.id] = pt
+
+                sorted_ids = sorted(rrf_scores.keys(), key=lambda pid: rrf_scores[pid], reverse=True)
+                matched_points = [point_map[pid] for pid in sorted_ids[:fetch_limit]]
+
         except Exception as e:
-            print(f"[Qdrant Search Warning]: {e}")
+            print(f"[Qdrant Search Error ({mode})]: {e}")
+            matched_points = []
 
         retrieved_parents: List[Document] = []
         seen_parent_ids = set()
         
         db = SessionLocal()
         try:
-            for child in matched_children:
-                parent_id = child.metadata.get("parent_id")
+            for pt in matched_points:
+                parent_id = pt.payload.get("parent_id") if pt.payload else None
                 if parent_id and parent_id not in seen_parent_ids:
                     seen_parent_ids.add(parent_id)
                     p_doc_record = crud.get_parent_document(db, parent_id)
@@ -120,6 +236,9 @@ class QdrantVectorStore(VectorStoreInterface):
                             metadata=json.loads(p_doc_record.metadata_json)
                         )
                         retrieved_parents.append(parent_doc)
+
+            if len(retrieved_parents) > top_k:
+                retrieved_parents = retrieved_parents[:top_k]
 
             if not retrieved_parents:
                 candidates_records = crud.get_all_parent_documents(db)

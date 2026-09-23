@@ -2,6 +2,9 @@ import os
 from typing import Dict, Any
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
+from langgraph.types import interrupt
+from duckduckgo_search import DDGS
+
 from app.schemas.state import RAGState
 from app.retrieval.factory import get_vector_store
 from app.retrieval.reranker import RerankEngine
@@ -15,10 +18,11 @@ hyde_engine = HyDEEngine()
 def retrieve_node(state: RAGState) -> Dict[str, Any]:
     query = state.get("question", "")
     source_file = state.get("source_file")
+    user_id = state.get("user_id")
     try:
         search_query = hyde_engine.generate_hypothetical_document(query)
         retrieved_parents = vector_store_instance.search_child_and_fetch_parents(
-            search_query, top_k=10, source_file=source_file
+            search_query, top_k=10, source_file=source_file, user_id=user_id
         )
         return {"documents": retrieved_parents}
     except Exception as e:
@@ -55,15 +59,33 @@ def rerank_node(state: RAGState) -> Dict[str, Any]:
     }
 
 
-from duckduckgo_search import DDGS
-
 def web_search_node(state: RAGState) -> Dict[str, Any]:
     query = state.get("question", "")
     reranked_docs = state.get("reranked_documents", [])
+    user_role = (state.get("user_role") or "free").lower()
     
-    # If we have strong context from PDF, skip web search
+    # Skip web search if document context is strong
     if len(reranked_docs) > 0 and len(reranked_docs[0].page_content) > 100:
         return {"web_context": ""}
+
+    # Task 5 RBAC Gating: Free tier users cannot perform web search
+    if user_role not in ["pro", "admin"]:
+        print(f"[RBAC Gating]: Web search restricted for user role '{user_role}'. Upgrade to Pro for live web retrieval.")
+        return {"web_context": "[Notice: Web search fallback is restricted on your current plan. Upgrade to Pro/Admin to enable live web retrieval.]"}
+
+    # Task 5 HITL Interrupt: Require user approval before searching web
+    try:
+        approval = interrupt({
+            "action": "web_search_approval",
+            "query": query,
+            "reason": "PDF context insufficient. Human approval requested before performing external web search."
+        })
+        
+        if isinstance(approval, dict) and not approval.get("approved", False):
+            print("[HITL Approval]: Web search declined by user.")
+            return {"web_context": ""}
+    except Exception as e:
+        print(f"[HITL Notice]: Continuing standard web search flow ({e})")
         
     try:
         results = DDGS().text(query, max_results=3)
@@ -73,6 +95,7 @@ def web_search_node(state: RAGState) -> Dict[str, Any]:
         print(f"[Web Search Error]: {e}")
         return {"web_context": ""}
 
+
 def generate_node(state: RAGState) -> Dict[str, Any]:
     query = state.get("question", "")
     reranked_docs = state.get("reranked_documents", [])
@@ -81,7 +104,7 @@ def generate_node(state: RAGState) -> Dict[str, Any]:
     if not reranked_docs:
         reranked_docs = state.get("documents", [])
 
-    if not reranked_docs:
+    if not reranked_docs and not web_context:
         return {"generation": "No relevant context was found in the ingested documents to answer your query."}
 
     context_str = "\n\n---\n\n".join(
@@ -89,11 +112,9 @@ def generate_node(state: RAGState) -> Dict[str, Any]:
          for doc in reranked_docs]
     )
 
-    # Append Web Context if present
     if web_context:
         context_str += f"\n\n--- WEB CONTEXT ---\n{web_context}"
 
-    # Truncate context to max 6000 chars to stay within Groq token limits
     MAX_CONTEXT_CHARS = 6000
     if len(context_str) > MAX_CONTEXT_CHARS:
         context_str = context_str[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated for token limit...]"
@@ -115,7 +136,7 @@ def generate_node(state: RAGState) -> Dict[str, Any]:
             temperature=0.1,
             model_name=active_model,
             groq_api_key=groq_api_key,
-            max_tokens=1024,  # cap to avoid OTPM rate limit errors
+            max_tokens=1024,
         )
         chain = prompt | llm
         response = chain.invoke({"context": context_str, "question": query})
@@ -125,14 +146,14 @@ def generate_node(state: RAGState) -> Dict[str, Any]:
         try:
             from app.llm_manager import fetch_active_groq_models
             available = fetch_active_groq_models(groq_api_key)
-            fallback_model = next((m for m in available if m != active_model), "llama-3.1-8b-instant")
+            fallback_model = next((m for m in available if m != active_model), "openai/gpt-oss-20b")
             
             print(f"[Groq LLM Fallback]: Retrying with alternative active model '{fallback_model}'...")
             fallback_llm = ChatGroq(
                 temperature=0.1,
                 model_name=fallback_model,
                 groq_api_key=groq_api_key,
-                max_tokens=1024,  # cap to avoid OTPM rate limit errors
+                max_tokens=1024,
             )
             fallback_chain = prompt | fallback_llm
             response = fallback_chain.invoke({"context": context_str, "question": query})

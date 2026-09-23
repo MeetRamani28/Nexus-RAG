@@ -6,13 +6,10 @@ _active_model_cache: Optional[str] = None
 
 # Priority ranking for text generation models on Groq
 PREFERRED_MODEL_PRIORITY: List[str] = [
-    "llama-3.3-70b-versatile",
     "qwen/qwen3.8-27b",
-    "qwen/qwen3.6-27b",
     "openai/gpt-oss-120b",
-    "groq/compound",
-    "llama-3.1-70b-versatile",
-    "mixtral-8x7b-32768",
+    "openai/gpt-oss-20b",
+    "llama-3.3-70b-versatile",
     "llama3-70b-8192"
 ]
 
@@ -62,26 +59,22 @@ def get_active_llm_model_name() -> str:
 
     available_models = fetch_active_groq_models(groq_api_key)
 
-    # 1. If env override is specified and available, use it
     if env_override and (not available_models or env_override in available_models):
         _active_model_cache = env_override
         print(f"[LLM Manager]: Using configured LLM_MODEL_NAME: '{_active_model_cache}'")
         return _active_model_cache
 
-    # 2. Match against priority list
     for model_id in PREFERRED_MODEL_PRIORITY:
         if model_id in available_models:
             _active_model_cache = model_id
             print(f"[LLM Manager]: Dynamically resolved best active Groq model: '{_active_model_cache}'")
             return _active_model_cache
 
-    # 3. If any text model is available, use the first one
     if available_models:
         _active_model_cache = available_models[0]
         print(f"[LLM Manager]: Fallback to available Groq model: '{_active_model_cache}'")
         return _active_model_cache
 
-    # 4. Ultimate fallback default
     fallback = env_override or "qwen/qwen3.8-27b"
     _active_model_cache = fallback
     print(f"[LLM Manager]: Default fallback model: '{_active_model_cache}'")

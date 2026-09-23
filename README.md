@@ -4,9 +4,9 @@
 
 # Nexus-RAG
 
-### Agentic Document Intelligence Engine
+### Enterprise Multi-Agent Retrieval-Augmented Generation (RAG) Platform
 
-**Upload any PDF. Ask anything. Get cited, real-time AI answers.**
+**Upload any PDF. Ask anything. Instant, high-precision document intelligence with cited real-time AI answers.**
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-nexus--rag--rose.vercel.app-6366f1?style=for-the-badge&logo=vercel&logoColor=white)](https://nexus-rag-rose.vercel.app/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -43,14 +43,14 @@
 ---
 
 ### Multi-Agent Pipeline - Live Processing
-> Watch the 4-agent RAG pipeline execute in real-time: Vector Search -> Reranking -> Web Fallback -> Synthesis.
+> Watch the specialized RAG pipeline execute in real-time: Vector Retrieval -> Cohere Reranking -> Web Search Approval -> LLM Synthesis.
 
 ![Agent Processing](Frontend/public/screenshots/03_agent_processing.png)
 
 ---
 
 ### AI Response - Rich Markdown with Citations
-> Responses include structured markdown (tables, bold, bullet points) with source citation badges.
+> Responses include structured markdown (tables, bold, bullet points) with interactive source citation badges.
 
 ![AI Response](Frontend/public/screenshots/04_ai_response.png)
 
@@ -73,23 +73,23 @@
                             |
                +------------v-------------+
                |  Semantic Cache (Redis)  |  <-- Cache HIT -> skip LLM
-               |  Cosine Similarity >= 95%|
+               |  Scoped nexus_cache:user |
                +------------+-------------+
-                     Cache MISS
+                      Cache MISS
                             |
           +-----------------v----------------------------------------+
-          |              LangGraph Orchestrator                       |
+          |         LangGraph Orchestrator (Memory Checkpointer)     |
           |                                                           |
-          |  [AGENT 1: Retrieve]  -->  [AGENT 2: Cohere Rerank v3]   |
-          |       (Qdrant)                  (Cross-Encoder)           |
+          |  [AGENT 1: Hybrid Retrieve] -> [AGENT 2: Cohere Rerank]   |
+          |  (Dense + FastEmbed BM25)      (Cross-Encoder v3)        |
           |                                        |                  |
-          |  [AGENT 3: Web Search]  -->  [AGENT 4: Generate (Groq)]  |
-          |    (DuckDuckGo)                  (Llama 3.3 70B)         |
+          |  [AGENT 3: HITL Web Search] -> [AGENT 4: LLM Synthesizer] |
+          |  (Approval & RBAC Gating)       (Groq Active Models)     |
           +----------------------------------------------------------+
                                        |
                         +--------------v--------------+
-                        |  SSE Token Streaming        |
-                        |  React Frontend + Citations  |
+                        |  SSE / WebSocket Streaming  |
+                        |  React Frontend + Citations |
                         +-----------------------------+
 ```
 
@@ -97,36 +97,38 @@
 
 ## Key Features
 
-### Intelligent RAG Pipeline
-- **Parent-Child Chunking** - Large parent chunks (2000 chars) for rich LLM context + small child chunks (400 chars) for high-precision vector search
-- **HyDE (Hypothetical Document Embedding)** - LLM generates a hypothetical answer first, then retrieves by its embedding for improved recall
-- **Cohere Rerank v3** - Cross-encoder re-scoring after vector retrieval to eliminate noisy context before synthesis
-- **Web Search Fallback** - DuckDuckGo agent activates automatically when document context is insufficient
-- **Semantic Cache** - Repeated queries bypass the LLM entirely (Redis with in-memory fallback) - saves tokens, responds instantly
+### 1. Hybrid Search & Multi-Tenant Isolation
+- **Hybrid Retrieval (Dense + FastEmbed BM25 + RRF)** - Combines Cohere `embed-english-v3.0` dense semantic vectors with `FastEmbed` BM25 sparse keyword vectors using Reciprocal Rank Fusion (RRF).
+- **Parent-Child Dual Granularity Chunking** - 2000-character parent context chunks paired with 400-character child vectors for pinpoint accuracy without context loss.
+- **Strict Multi-Tenant Isolation** - Qdrant payload keyword indexing (`user_id`, `doc_id`) enforces zero cross-tenant data leakage.
 
-### Real-time Streaming
-- **Server-Sent Events (SSE)** - Token-by-token response streaming from Groq
-- **Live agent step indicators** - Users see "Vector Search -> Reranking -> Synthesizing..." in real-time
-- **Reasoning block rendering** - DeepSeek model chain-of-thought displayed as styled blockquotes
+### 2. LangGraph State Persistence & Human-in-the-Loop (HITL)
+- **Checkpointer State Persistence** - Conversation states are saved per thread using `MemorySaver` checkpointer.
+- **HITL Web Search Approval** - Graph interrupts execution before external web search, soliciting explicit user approval when PDF context is low.
+- **Clerk RBAC Gating** - Restricts web search capabilities based on user role (`free`, `pro`, `admin`).
 
-### Full Chat Experience
-- **Persistent conversations** backed by PostgreSQL - chat history survives reloads
-- **Multi-conversation support** - multiple threads like ChatGPT, with rename and delete
-- **Source citation badges** - click to expand the exact retrieved chunk from the document
-- **Export to Markdown** - download full conversation as .md file
-- **Model selector** - switch between Groq models mid-chat
-- **Duplicate detection** - MD5 hash check prevents re-processing the same PDF
+### 3. Observability & Semantic Caching
+- **LangSmith Tracing** - Node-by-node execution tracing across all graph stages (`retrieve`, `rerank`, `web_search`, `generate`).
+- **Structured JSON Logging** - Production-grade JSON logs with ISO timestamps, log level, component tags, user ID, and request ID.
+- **Scoped Semantic Cache (Redis + InMemory)** - Query cosine similarity matching (>95%) with tenant-scoped cache keys (`nexus_cache:{user_id}:{doc_id}:{hash}`).
 
-### Auth and Security
-- **Clerk JWT authentication** - Google / Email signup
-- **Per-user data isolation** - no cross-user data access
-- **Rate limiting** - 30 queries/min per user via SlowAPI
+---
 
-### UI and UX
-- **Fully responsive** - mobile and desktop
-- **Dark premium design** - Zinc palette
-- **Cold-start loading screen** - graceful handling of Render free-tier spin-up
-- **Skeleton loaders** for conversation list
+## Benchmark Evaluation Results
+
+Evaluated over 35 ground-truth benchmark Q&A pairs across test documents (`evals/golden_set.jsonl`).
+
+### Retrieval Ablation Comparison
+| Search Mode | Hit-Rate@3 | Hit-Rate@5 | Hit-Rate@10 | MRR | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Dense Only** | 100.0% | 100.0% | 100.0% | 0.8286 | Cohere `embed-english-v3.0` |
+| **Sparse BM25 Only** | 100.0% | 100.0% | 100.0% | 0.9429 | FastEmbed `Qdrant/bm25` |
+| **Hybrid (RRF)** | **100.0%** | **100.0%** | **100.0%** | **0.8571** | Dense + Sparse + Reciprocal Rank Fusion |
+
+### End-to-End Quality & Caching Performance
+- **LLM-as-a-Judge Answer Relevance**: **0.97 / 1.0**
+- **LLM-as-a-Judge Faithfulness**: **0.735 / 1.0**
+- **Semantic Cache Hit Rate**: **100.0%**
 
 ---
 
@@ -146,18 +148,15 @@
 ### Backend
 | Technology | Purpose |
 |---|---|
-| FastAPI | REST API + SSE streaming |
-| LangGraph | Multi-agent state machine orchestration |
-| LangChain | LLM chains and prompt engineering |
-| Groq API (Llama 3.3 70B) | Ultra-fast LLM inference |
+| FastAPI | REST API + SSE & WebSocket streaming |
+| LangGraph | Multi-agent state machine with checkpointer |
+| FastEmbed | BM25 sparse keyword embeddings |
+| Groq API | Active model dynamic resolution (Qwen 27B / Llama 70B) |
 | Cohere Rerank v3 | Cross-encoder re-ranking |
-| Qdrant | Vector database for semantic search |
-| FastEmbed (all-MiniLM-L6-v2) | Local embedding model |
-| PostgreSQL + SQLAlchemy | Conversations and document metadata |
-| Redis + InMemory fallback | Semantic response caching |
-| SlowAPI | Rate limiting |
-| DuckDuckGo Search | Live web context fallback |
-| **Render** | Backend hosting |
+| Qdrant | Vector database with named dense + sparse vectors & payload indexing |
+| PostgreSQL + SQLAlchemy | Persistent metadata & parent document storage |
+| Redis + InMemory | Multi-tenant scoped semantic cache |
+| LangSmith | Node-level observability & tracing |
 
 ---
 
@@ -166,7 +165,7 @@
 ### Prerequisites
 - **Python** 3.10+
 - **Node.js** v18+
-- API Keys: [Groq](https://console.groq.com/) | [Cohere](https://cohere.com/) | [Clerk](https://clerk.com/)
+- API Keys: [Groq](https://console.groq.com/) | [Cohere](https://cohere.com/) | [Clerk](https://clerk.com/) | [Qdrant](https://qdrant.tech/)
 
 ### 1. Clone
 
@@ -186,36 +185,46 @@ python -m venv .venv
 # Linux/macOS
 source .venv/bin/activate
 
-pip install -r requirements.txt
+pip install -r requirements.txt pytest pytest-asyncio fastembed langsmith
 ```
 
 Create `Backend/.env`:
 ```env
 GROQ_API_KEY=your_groq_api_key
 COHERE_API_KEY=your_cohere_api_key
-DATABASE_URL=postgresql://user:password@host:port/dbname
-CLERK_SECRET_KEY=your_clerk_secret_key
-REDIS_URL=redis://localhost:6379/0
+QDRANT_URL=your_qdrant_cloud_url
+QDRANT_API_KEY=your_qdrant_api_key
+POSTGRES_DB_URL=postgresql://user:password@host:port/dbname
+REDIS_URL=rediss://default:password@host:port
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=your_langsmith_api_key
+LANGCHAIN_PROJECT=Nexus-RAG-Enterprise
+RETRIEVAL_SEARCH_MODE=hybrid
 ```
 
+Run Backend:
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 3. Frontend Setup
+### 3. Run Evaluation Suite
+
+```bash
+python evals/ingest_eval_docs.py
+python -u evals/run_evals.py
+```
+
+### 4. Run Pytest Suite
+
+```bash
+python -m pytest Backend/tests
+```
+
+### 5. Frontend Setup
 
 ```bash
 cd Frontend
 npm install
-```
-
-Create `Frontend/.env`:
-```env
-VITE_API_BASE_URL=http://localhost:8000
-VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-```
-
-```bash
 npm run dev
 # Open http://localhost:5173
 ```
@@ -227,19 +236,22 @@ npm run dev
 ```
 Nexus-RAG/
 ├── Backend/
-│   └── app/
-│       ├── graph/          # LangGraph state machine and agent nodes
-│       ├── ingestion/      # PDF loader and parent-child chunking
-│       ├── retrieval/      # Qdrant vector store and Cohere reranker
-│       ├── cache/          # Semantic cache (Redis + in-memory fallback)
-│       ├── core/           # Embeddings, config, auth
-│       ├── db/             # PostgreSQL models, CRUD, schemas
-│       └── main.py         # FastAPI app, SSE endpoints
+│   ├── app/
+│   │   ├── graph/          # LangGraph state machine, nodes & HITL interrupts
+│   │   ├── ingestion/      # PDF loader, scanned PDF checks, parent-child chunking
+│   │   ├── retrieval/      # Qdrant hybrid vector store (Dense + BM25 Sparse + RRF)
+│   │   ├── cache/          # Multi-tenant scoped Redis semantic cache
+│   │   ├── core/           # Embeddings, structured JSON logger, auth
+│   │   ├── db/             # PostgreSQL models, CRUD, schemas
+│   │   └── main.py         # FastAPI app, SSE & WebSocket streaming
+│   └── tests/              # Pytest suite (isolation, cache, graph, pdf)
+├── evals/
+│   ├── golden_set.jsonl    # Ground truth evaluation dataset
+│   ├── ingest_eval_docs.py # Sample PDF ingestion script
+│   └── run_evals.py        # Automated evaluation harness
 ├── Frontend/
-│   └── src/
-│       ├── components/     # ChatInterface, Sidebar, CitationBadge, ...
-│       ├── App.tsx         # Root layout, auth, routing
-│       └── index.css       # Tailwind + typography plugin
+│   └── src/                # React 19 UI components & SSE hooks
+├── EVALS.md                # Empirical evaluation benchmark results
 └── README.md
 ```
 

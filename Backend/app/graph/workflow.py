@@ -1,10 +1,11 @@
 from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.memory import MemorySaver
 from app.schemas.state import RAGState
 from app.graph.nodes import retrieve_node, rerank_node, web_search_node, generate_node
 
 def create_rag_graph():
     """
-    Constructs and compiles the modular LangGraph RAG workflow.
+    Constructs and compiles the modular LangGraph RAG workflow with state persistence checkpointer.
     Flow: START -> retrieve_node -> rerank_node -> web_search_node -> generate_node -> END
     """
     workflow = StateGraph(RAGState)
@@ -20,7 +21,8 @@ def create_rag_graph():
     workflow.add_edge("web_search", "generate")
     workflow.add_edge("generate", END)
 
-    app = workflow.compile()
+    checkpointer = MemorySaver()
+    app = workflow.compile(checkpointer=checkpointer)
     return app
 
 rag_graph = create_rag_graph()
