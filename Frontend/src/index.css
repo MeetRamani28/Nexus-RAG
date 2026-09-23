@@ -2,8 +2,8 @@
 @plugin "@tailwindcss/typography";
 
 html, body {
-  background-color: #09090b; /* zinc-950 */
-  color: #fafafa; /* zinc-50 */
+  background-color: #F8F6F0;
+  color: #18181B;
   height: 100vh;
   overflow: hidden;
   overflow-x: hidden;

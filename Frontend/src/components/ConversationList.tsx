@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { MessageSquare, Trash2, Edit2, Check, X } from "lucide-react";
 import type { ConversationListItem } from "../types";
 
@@ -75,10 +75,10 @@ export const ConversationList: React.FC<Props> = ({
 
   if (conversations.length === 0) {
     return (
-      <div className="text-center text-zinc-500 text-xs py-6 px-2">
+      <div className="text-center text-[#71717A] text-xs py-6 px-2">
         No conversations yet.
         <br />
-        Click <span className="text-sky-400">+ New Chat</span> to begin.
+        Click <span className="text-[#FF5722] font-semibold">+ New Chat</span> to begin.
       </div>
     );
   }
@@ -87,21 +87,21 @@ export const ConversationList: React.FC<Props> = ({
     <div className="space-y-4">
       {Object.entries(groups).map(([label, convs]) => (
         <div key={label}>
-          <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold px-2 mb-1">
+          <p className="text-[10px] uppercase tracking-widest text-[#71717A] font-bold px-2 mb-1">
             {label}
           </p>
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             {convs.map((conv) => (
               <div
                 key={conv.id}
                 onClick={() => onSelect(conv.id)}
                 className={`group relative flex items-center px-3 py-2.5 rounded-xl cursor-pointer transition-all ${
                   activeId === conv.id
-                    ? "bg-sky-500/15 border border-sky-500/30 text-zinc-100"
-                    : "hover:bg-zinc-800/60 text-zinc-400 hover:text-zinc-200 border border-transparent"
+                    ? "bg-white border border-[#E5E2D9] text-[#18181B] font-semibold shadow-sm"
+                    : "hover:bg-black/5 text-[#71717A] hover:text-[#18181B] border border-transparent"
                 }`}
               >
-                <MessageSquare className="w-3.5 h-3.5 shrink-0 mr-2.5 opacity-60" />
+                <MessageSquare className="w-3.5 h-3.5 shrink-0 mr-2.5 opacity-70 text-[#FF5722]" />
 
                 {editingId === conv.id ? (
                   <div className="flex-1 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -113,12 +113,12 @@ export const ConversationList: React.FC<Props> = ({
                         if (e.key === "Enter") confirmEdit(conv.id, e as unknown as React.MouseEvent);
                         if (e.key === "Escape") cancelEdit(e as unknown as React.MouseEvent);
                       }}
-                      className="flex-1 bg-zinc-900 text-zinc-100 text-xs rounded px-2 py-1 border border-zinc-800 focus:outline-none focus:border-sky-500 min-w-0"
+                      className="flex-1 bg-white text-[#18181B] text-xs rounded-lg px-2 py-1 border border-[#E5E2D9] focus:outline-none focus:border-[#18181B] min-w-0"
                     />
-                    <button onClick={(e) => confirmEdit(conv.id, e)} className="text-emerald-400 hover:text-emerald-300">
+                    <button onClick={(e) => confirmEdit(conv.id, e)} className="text-emerald-600 hover:text-emerald-700 p-0.5">
                       <Check className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={cancelEdit} className="text-zinc-500 hover:text-zinc-300">
+                    <button onClick={cancelEdit} className="text-[#71717A] hover:text-[#18181B] p-0.5">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -128,14 +128,14 @@ export const ConversationList: React.FC<Props> = ({
                     <div className="hidden group-hover:flex items-center gap-1 ml-1 shrink-0">
                       <button
                         onClick={(e) => startEdit(conv, e)}
-                        className="p-0.5 text-zinc-500 hover:text-zinc-300 transition-colors"
+                        className="p-0.5 text-[#71717A] hover:text-[#18181B] transition-colors"
                         title="Rename"
                       >
                         <Edit2 className="w-3 h-3" />
                       </button>
                       <button
                         onClick={(e) => handleDelete(conv.id, e)}
-                        className="p-0.5 text-zinc-500 hover:text-rose-400 transition-colors"
+                        className="p-0.5 text-[#71717A] hover:text-rose-600 transition-colors"
                         title="Delete"
                       >
                         <Trash2 className="w-3 h-3" />

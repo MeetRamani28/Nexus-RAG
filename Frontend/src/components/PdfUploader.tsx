@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Upload, FileText, CheckCircle2, AlertCircle, Loader2, Trash2, RefreshCw,
 } from "lucide-react";
@@ -102,55 +102,55 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
   return (
     <div className="flex flex-col gap-4">
       {/* Upload area */}
-      <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-5 backdrop-blur-md shadow-xl">
+      <div className="bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2.5">
-            <div className="p-1.5 bg-sky-500/10 rounded-lg border border-sky-500/20 text-sky-400">
+            <div className="p-1.5 bg-[#FF5722]/10 rounded-lg border border-[#FF5722]/20 text-[#FF5722]">
               <Upload className="w-4 h-4" />
             </div>
-            <h2 className="text-sm font-semibold text-zinc-100">Upload PDF</h2>
+            <h2 className="text-sm font-semibold text-[#18181B]">Upload PDF</h2>
           </div>
         </div>
 
         <label
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
-          className="flex flex-col items-center justify-center border-2 border-dashed border-zinc-800 hover:border-sky-500/50 rounded-xl p-5 cursor-pointer transition-colors bg-zinc-950/40"
+          className="flex flex-col items-center justify-center border-2 border-dashed border-[#E5E2D9] hover:border-[#FF5722]/50 rounded-xl p-5 cursor-pointer transition-colors bg-[#F8F6F0]"
         >
-          <FileText className="w-7 h-7 text-zinc-400 mb-2" />
-          <span className="text-sm font-medium text-zinc-300 text-center">
+          <FileText className="w-7 h-7 text-[#FF5722] mb-2" />
+          <span className="text-sm font-medium text-[#18181B] text-center">
             {file ? file.name : "Click or drag PDF here"}
           </span>
-          <span className="text-xs text-zinc-500 mt-1">Multi-page financial & technical PDFs</span>
+          <span className="text-xs text-[#71717A] mt-1">Multi-page financial & technical PDFs</span>
           <input type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
         </label>
 
         {error && (
-          <div className="mt-3 flex items-center space-x-2 text-rose-400 text-xs bg-rose-500/10 p-3 rounded-lg border border-rose-500/20">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div className="mt-3 flex items-center space-x-2 text-rose-700 text-xs bg-rose-50 p-3 rounded-lg border border-rose-200">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
             <span>{error}</span>
           </div>
         )}
 
         {lastResult && (
-          <div className={`mt-3 rounded-xl p-3 text-xs border space-y-1 ${lastResult.duplicate ? "bg-amber-500/10 border-amber-500/20 text-amber-300" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"}`}>
+          <div className={`mt-3 rounded-xl p-3 text-xs border space-y-1 ${lastResult.duplicate ? "bg-amber-50 border-amber-200 text-amber-900" : "bg-emerald-50 border-emerald-200 text-emerald-900"}`}>
             <div className="flex items-center space-x-1.5 font-medium">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
               <span>{lastResult.duplicate ? "Already Ingested" : `${lastResult.filename} Processed!`}</span>
             </div>
             {!lastResult.duplicate && (
-              <div className="text-zinc-400 pl-5">
-                Parents: <strong className="text-zinc-200">{lastResult.parent_chunks_created}</strong> | Children: <strong className="text-zinc-200">{lastResult.child_chunks_created}</strong>
+              <div className="text-[#71717A] pl-5">
+                Parents: <strong className="text-[#18181B]">{lastResult.parent_chunks_created}</strong> | Children: <strong className="text-[#18181B]">{lastResult.child_chunks_created}</strong>
               </div>
             )}
-            {lastResult.duplicate && <p className="text-zinc-400 pl-5">{lastResult.message}</p>}
+            {lastResult.duplicate && <p className="text-[#71717A] pl-5">{lastResult.message}</p>}
           </div>
         )}
 
         <button
           onClick={handleUpload}
           disabled={!file || loading}
-          className="mt-3 w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-100 rounded-xl font-medium text-sm transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed"
+          className="mt-3 w-full py-2.5 px-4 bg-[#18181B] hover:bg-[#27272A] disabled:bg-zinc-200 disabled:text-zinc-400 text-white rounded-xl font-medium text-sm transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed shadow-sm"
         >
           {loading ? (
             <><Loader2 className="w-4 h-4 animate-spin" /><span>Ingesting...</span></>
@@ -161,35 +161,35 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
       </div>
 
       {/* Ingested documents list */}
-      <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-5 backdrop-blur-md shadow-xl">
+      <div className="bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-sm">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-zinc-100">Ingested Documents</h2>
-          <button onClick={fetchDocuments} className="text-zinc-500 hover:text-zinc-300 transition-colors" title="Refresh">
+          <h2 className="text-sm font-semibold text-[#18181B]">Ingested Documents</h2>
+          <button onClick={fetchDocuments} className="text-[#71717A] hover:text-[#18181B] transition-colors p-1" title="Refresh">
             <RefreshCw className={`w-3.5 h-3.5 ${docsLoading ? "animate-spin" : ""}`} />
           </button>
         </div>
 
         {documents.length === 0 ? (
-          <p className="text-xs text-zinc-500 text-center py-3">No documents ingested yet.</p>
+          <p className="text-xs text-[#71717A] text-center py-3">No documents ingested yet.</p>
         ) : (
           <div className="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar">
             {documents.map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between bg-zinc-800/50 rounded-lg px-3 py-2 group">
+              <div key={doc.id} className="flex items-center justify-between bg-[#F8F6F0] rounded-xl px-3 py-2 border border-[#E5E2D9] group">
                 <div className="flex items-center gap-2 min-w-0">
-                  <FileText className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                  <FileText className="w-3.5 h-3.5 text-[#FF5722] shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-xs text-zinc-200 truncate" title={doc.filename}>{doc.filename}</p>
-                    <p className="text-[10px] text-zinc-500">{doc.parent_chunks}P · {doc.child_chunks}C chunks</p>
+                    <p className="text-xs text-[#18181B] font-medium truncate" title={doc.filename}>{doc.filename}</p>
+                    <p className="text-[10px] text-[#71717A]">{doc.parent_chunks}P · {doc.child_chunks}C chunks</p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleDelete(doc.filename)}
                   disabled={deletingFile === doc.filename}
-                  className="shrink-0 ml-2 text-zinc-600 hover:text-rose-400 transition-colors disabled:opacity-50"
+                  className="shrink-0 ml-2 text-[#71717A] hover:text-rose-600 transition-colors disabled:opacity-50 cursor-pointer"
                   title="Remove document"
                 >
                   {deletingFile === doc.filename
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-600" />
                     : <Trash2 className="w-3.5 h-3.5" />
                   }
                 </button>
