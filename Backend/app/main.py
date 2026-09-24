@@ -326,12 +326,44 @@ async def ingest_pdf(
             os.remove(temp_path)
 
 
+# ─── Fast Path Classifier ───────────────────────────────────────────────────
+
+def is_fast_path_query(question: str, source_file: Optional[str] = None) -> bool:
+    """
+    Determines if a query can bypass full RAG vector retrieval & Cohere re-ranking
+    for sub-300ms response time (greetings, general chit-chat, or non-document prompts).
+    """
+    q = question.strip().lower()
+    
+    # 1. Standard greetings & small talk
+    greetings_patterns = [
+        r"^(hi|hello|hey|hola|greetings|good\s+morning|good\s+afternoon|good\s+evening|howdy|sup)[\s!\.\?]*$",
+        r"^(how\s+are\s+you.*|who\s+are\s+you.*|what\s+can\s+you\s+do.*|what\s+is\s+your\s+name.*|who\s+created\s+you.*)$",
+        r"^(thanks.*|thank\s+you.*|bye.*|goodbye.*|cool|awesome|great|ok|okay)[\s!\.]*$",
+        r"^(help|what\s+is\s+nexus\s*rag|tell\s+me\s+about\s+yourself)$"
+    ]
+    
+    for pat in greetings_patterns:
+        if re.search(pat, q):
+            return True
+
+    # Keywords indicating document intent
+    doc_keywords = ["pdf", "document", "file", "page", "contract", "report", "summary", "clause", "table", "analysis", "ingested", "context", "according to"]
+    has_doc_keyword = any(kw in q for kw in doc_keywords)
+    
+    # 2. If no source file attached and no explicit document keywords requested
+    if not source_file and not has_doc_keyword:
+        return True
+
+    return False
+
+
 # ─── Query Stream ─────────────────────────────────────────────────────────────
 
 @app.post("/api/v1/query/stream")
 @limiter.limit("30/minute")
 async def stream_query(request: Request, payload: QueryRequest, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
-    """SSE streaming endpoint. Checks Redis cache, executes RAG graph, saves to DB."""
+    """SSE streaming endpoint. Checks Redis cache, executes fast-path or RAG graph, saves to DB."""
 
     async def event_generator():
         try:
@@ -350,13 +382,68 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                 for word in cached_generation.split(" "):
                     yield {"event": "message", "data": json.dumps({"token": word + " "})}
                     await asyncio.sleep(0.01)
-                # Save cached assistant response to DB
                 if payload.conversation_id:
                     crud.add_message(db, payload.conversation_id, user_id, "assistant", cached_generation, cached_citations)
                 yield {"event": "done", "data": "[DONE]"}
                 return
 
-            # 3. Cache Miss — Execute LangGraph RAG Workflow
+            # 3. Check Fast-Path (Sub-300ms direct streaming for chit-chat / general queries)
+            if is_fast_path_query(payload.question, source_file):
+                yield {"event": "agent", "data": json.dumps({"agent_step": "Synthesis Agent responding directly..."})}
+                
+                groq_api_key = os.getenv("GROQ_API_KEY", "")
+                active_model = payload.model or get_active_llm_model_name()
+                
+                from langchain_groq import ChatGroq
+                from langchain_core.prompts import ChatPromptTemplate
+                from app.llm_manager import fetch_active_groq_models
+                
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", "You are Nexus-RAG, an intelligent Enterprise AI Assistant. Provide helpful, accurate, concise, and beautifully formatted responses using Markdown."),
+                    ("human", "{question}")
+                ])
+                
+                try:
+                    llm = ChatGroq(
+                        temperature=0.7,
+                        model_name=active_model,
+                        groq_api_key=groq_api_key,
+                        max_tokens=1024,
+                    )
+                    chain = prompt | llm
+                    res = await chain.ainvoke({"question": payload.question})
+                    generation_text = str(res.content)
+                except Exception as fast_path_err:
+                    print(f"[Fast Path LLM Warning]: Model '{active_model}' failed ({fast_path_err}). Attempting fallback...")
+                    try:
+                        available = fetch_active_groq_models(groq_api_key)
+                        fallback_model = next((m for m in available if m != active_model), "llama-3.1-8b-instant")
+                        fallback_llm = ChatGroq(
+                            temperature=0.7,
+                            model_name=fallback_model,
+                            groq_api_key=groq_api_key,
+                            max_tokens=1024,
+                        )
+                        fallback_chain = prompt | fallback_llm
+                        res = await fallback_chain.ainvoke({"question": payload.question})
+                        generation_text = str(res.content)
+                    except Exception as fb_err:
+                        generation_text = f"Error generating response: {str(fast_path_err)}"
+
+                yield {"event": "citations", "data": json.dumps({"citations": []})}
+                for word in generation_text.split(" "):
+                    yield {"event": "message", "data": json.dumps({"token": word + " "})}
+                    await asyncio.sleep(0.01)
+
+                if generation_text and not generation_text.startswith("Error"):
+                    semantic_cache.set_cached_response(payload.question, generation_text, [])
+                if payload.conversation_id:
+                    crud.add_message(db, payload.conversation_id, user_id, "assistant", generation_text, [])
+                
+                yield {"event": "done", "data": "[DONE]"}
+                return
+
+            # 4. Full LangGraph RAG Workflow (For document-based queries)
             initial_state = {
                 "question": payload.question,
                 "model": payload.model,
@@ -397,7 +484,7 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                 yield {"event": "message", "data": json.dumps({"token": word + " "})}
                 await asyncio.sleep(0.02)
 
-            # 4. Save to Redis cache + DB
+            # 5. Save to Redis cache + DB
             if generation_text and not generation_text.startswith("Error"):
                 semantic_cache.set_cached_response(payload.question, generation_text, citations)
             if payload.conversation_id:
@@ -409,3 +496,4 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
         yield {"event": "done", "data": "[DONE]"}
 
     return EventSourceResponse(event_generator())
+

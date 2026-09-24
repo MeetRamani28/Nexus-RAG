@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
-import {
-  Upload, FileText, CheckCircle2, AlertCircle, Loader2, Trash2, RefreshCw,
-} from "lucide-react";
-import type { IngestResponse, IngestedDocument } from "../types";
+import React, { useState } from "react";
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import type { IngestResponse } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -16,24 +14,7 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<IngestResponse | null>(null);
-  const [documents, setDocuments] = useState<IngestedDocument[]>([]);
-  const [docsLoading, setDocsLoading] = useState(false);
-  const [deletingFile, setDeletingFile] = useState<string | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
-
-  const fetchDocuments = useCallback(async () => {
-    setDocsLoading(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/documents`);
-      if (res.ok) setDocuments(await res.json());
-    } catch {
-      // silently fail
-    } finally {
-      setDocsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchDocuments(); }, [fetchDocuments]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -102,7 +83,6 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
         }
       }
       if (!signal.aborted) {
-        await fetchDocuments();
         setFiles([]);
       }
     } catch (err: unknown) {
@@ -118,35 +98,21 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
     }
   };
 
-  const handleDelete = async (filename: string) => {
-    setDeletingFile(filename);
-    try {
-      await fetch(`${API_BASE_URL}/api/v1/documents/${encodeURIComponent(filename)}`, {
-        method: "DELETE",
-      });
-      setDocuments((prev) => prev.filter((d) => d.filename !== filename));
-    } catch {
-      // silently ignore
-    } finally {
-      setDeletingFile(null);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-4">
       {/* Upload area */}
-      <div className="bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-sm">
+      <div className="bg-[#151C2C] border border-[#232F48] rounded-2xl p-5 shadow-md">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2.5">
-            <div className="p-1.5 bg-[#FF5722]/10 rounded-lg border border-[#FF5722]/20 text-[#FF5722]">
+            <div className="p-1.5 bg-[#0B0F19] rounded-lg border border-[#232F48] text-[#00F0FF]">
               <Upload className="w-4 h-4" />
             </div>
-            <h2 className="text-sm font-semibold text-[#18181B]">Upload PDF</h2>
+            <h2 className="text-sm font-bold text-[#00F0FF]">Upload PDF</h2>
           </div>
           {loading && (
             <button
               onClick={handleCancel}
-              className="text-xs text-rose-600 font-semibold border border-rose-200 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+              className="text-xs text-rose-400 font-semibold border border-rose-800/40 bg-rose-950/40 hover:bg-rose-950/60 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
             >
               Cancel Upload
             </button>
@@ -156,92 +122,53 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
         <label
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
-          className="flex flex-col items-center justify-center border-2 border-dashed border-[#E5E2D9] hover:border-[#FF5722]/50 rounded-xl p-5 cursor-pointer transition-colors bg-[#F8F6F0]"
+          className="flex flex-col items-center justify-center border-2 border-dashed border-[#232F48] hover:border-[#00F0FF] rounded-xl p-5 cursor-pointer transition-colors bg-[#0B0F19]"
         >
-          <FileText className="w-7 h-7 text-[#FF5722] mb-2" />
-          <span className="text-sm font-medium text-[#18181B] text-center">
+          <FileText className="w-7 h-7 text-[#00F0FF] mb-2" />
+          <span className="text-sm font-semibold text-[#F1F5F9] text-center">
             {uploadProgress
               ? `Uploading ${uploadProgress.current} of ${uploadProgress.total}: ${uploadProgress.name}`
               : files.length > 0
               ? `${files.length} PDF file(s) selected: ${files.map(f => f.name).join(", ")}`
               : "Click or drag single or multiple PDFs here"}
           </span>
-          <span className="text-xs text-[#71717A] mt-1">Multi-page financial & technical PDFs</span>
+          <span className="text-xs text-[#94A3B8] mt-1">Multi-page financial & technical PDFs</span>
           <input type="file" accept=".pdf" multiple className="hidden" onChange={handleFileChange} />
         </label>
 
         {error && (
-          <div className="mt-3 flex items-center space-x-2 text-rose-700 text-xs bg-rose-50 p-3 rounded-lg border border-rose-200">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+          <div className="mt-3 flex items-center space-x-2 text-rose-300 text-xs bg-rose-950/40 p-3 rounded-lg border border-rose-800/50">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{error}</span>
           </div>
         )}
 
         {lastResult && (
-          <div className={`mt-3 rounded-xl p-3 text-xs border space-y-1 ${lastResult.duplicate ? "bg-amber-50 border-amber-200 text-amber-900" : "bg-emerald-50 border-emerald-200 text-emerald-900"}`}>
+          <div className={`mt-3 rounded-xl p-3 text-xs border space-y-1 ${lastResult.duplicate ? "bg-[#0B0F19] border-amber-500/40 text-amber-300" : "bg-[#0B0F19] border-emerald-500/40 text-emerald-300"}`}>
             <div className="flex items-center space-x-1.5 font-medium">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
               <span>{lastResult.duplicate ? "Already Ingested" : `${lastResult.filename} Processed!`}</span>
             </div>
             {!lastResult.duplicate && (
-              <div className="text-[#71717A] pl-5">
-                Parents: <strong className="text-[#18181B]">{lastResult.parent_chunks_created}</strong> | Children: <strong className="text-[#18181B]">{lastResult.child_chunks_created}</strong>
+              <div className="text-[#94A3B8] pl-5">
+                Parents: <strong className="text-[#00F0FF]">{lastResult.parent_chunks_created}</strong> | Children: <strong className="text-[#00F0FF]">{lastResult.child_chunks_created}</strong>
               </div>
             )}
-            {lastResult.duplicate && <p className="text-[#71717A] pl-5">{lastResult.message}</p>}
+            {lastResult.duplicate && <p className="text-[#94A3B8] pl-5">{lastResult.message}</p>}
           </div>
         )}
 
         <button
           onClick={handleUpload}
           disabled={files.length === 0 || loading}
-          className="mt-3 w-full py-2.5 px-4 bg-[#18181B] hover:bg-[#27272A] disabled:bg-zinc-200 disabled:text-zinc-400 text-white rounded-xl font-medium text-sm transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed shadow-sm"
+          className="mt-3 w-full py-2.5 px-4 bg-[#00F0FF] hover:bg-[#66F6FF] disabled:bg-[#232F48] disabled:text-[#94A3B8]/40 text-[#0B0F19] rounded-xl font-extrabold text-sm transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed shadow-md"
         >
           {loading ? (
-            <><Loader2 className="w-4 h-4 animate-spin text-[#FF5722]" /><span>Processing PDF(s)...</span></>
+            <><Loader2 className="w-4 h-4 animate-spin text-[#0B0F19]" /><span>Processing...</span></>
           ) : (
-            <span>Process & Embed PDF(s)</span>
+            <span>Upload Document(s)</span>
           )}
         </button>
-      </div>
-
-      {/* Ingested documents list */}
-      <div className="bg-white border border-[#E5E2D9] rounded-2xl p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-[#18181B]">Ingested Documents</h2>
-          <button onClick={fetchDocuments} className="text-[#71717A] hover:text-[#18181B] transition-colors p-1" title="Refresh">
-            <RefreshCw className={`w-3.5 h-3.5 ${docsLoading ? "animate-spin" : ""}`} />
-          </button>
-        </div>
-
-        {documents.length === 0 ? (
-          <p className="text-xs text-[#71717A] text-center py-3">No documents ingested yet.</p>
-        ) : (
-          <div className="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar">
-            {documents.map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between bg-[#F8F6F0] rounded-xl px-3 py-2 border border-[#E5E2D9] group">
-                <div className="flex items-center gap-2 min-w-0">
-                  <FileText className="w-3.5 h-3.5 text-[#FF5722] shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-[#18181B] font-medium truncate" title={doc.filename}>{doc.filename}</p>
-                    <p className="text-[10px] text-[#71717A]">{doc.parent_chunks}P · {doc.child_chunks}C chunks</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDelete(doc.filename)}
-                  disabled={deletingFile === doc.filename}
-                  className="shrink-0 ml-2 text-[#71717A] hover:text-rose-600 transition-colors disabled:opacity-50 cursor-pointer"
-                  title="Remove document"
-                >
-                  {deletingFile === doc.filename
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-600" />
-                    : <Trash2 className="w-3.5 h-3.5" />
-                  }
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

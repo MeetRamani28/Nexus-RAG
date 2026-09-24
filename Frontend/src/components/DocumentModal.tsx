@@ -52,30 +52,30 @@ export const DocumentModal: React.FC<Props> = ({ isOpen, onClose, onDocsChanged,
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#F8F6F0] border border-[#E5E2D9] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-[#151C2C] border border-[#232F48] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E2D9] bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#232F48] bg-[#0B0F19]">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-[#FF5722]/10 border border-[#FF5722]/20 rounded-xl text-[#FF5722]">
+            <div className="p-2 bg-[#151C2C] border border-[#232F48] rounded-xl text-[#00F0FF]">
               <Database className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-[#18181B]">Knowledge Base Documents</h3>
-              <p className="text-[11px] text-[#71717A]">Ingested PDFs indexed in Qdrant Vector Store</p>
+              <h3 className="text-sm font-bold text-[#00F0FF]">Knowledge Base Documents</h3>
+              <p className="text-[11px] text-[#94A3B8]">Ingested PDFs indexed in Qdrant Vector Store</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={fetchDocs}
-              className="p-1.5 rounded-lg text-[#71717A] hover:text-[#18181B] hover:bg-black/5 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#00F0FF] hover:bg-[#151C2C] transition-colors cursor-pointer"
               title="Refresh"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-[#71717A] hover:text-[#18181B] hover:bg-black/5 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#00F0FF] hover:bg-[#151C2C] transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -85,31 +85,31 @@ export const DocumentModal: React.FC<Props> = ({ isOpen, onClose, onDocsChanged,
         {/* Modal Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-3 no-scrollbar">
           {loading && documents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-[#71717A] space-y-2">
-              <Loader2 className="w-6 h-6 animate-spin text-[#FF5722]" />
+            <div className="flex flex-col items-center justify-center py-10 text-[#94A3B8] space-y-2">
+              <Loader2 className="w-6 h-6 animate-spin text-[#00F0FF]" />
               <p className="text-xs">Loading documents...</p>
             </div>
           ) : documents.length === 0 ? (
-            <div className="text-center py-10 text-[#71717A]">
-              <FileText className="w-8 h-8 mx-auto mb-2 opacity-40 text-[#71717A]" />
-              <p className="text-xs font-medium text-[#18181B]">No documents uploaded yet.</p>
-              <p className="text-[11px] text-[#71717A] mt-1">Upload a PDF inside any chat to build your knowledge base.</p>
+            <div className="text-center py-10 text-[#94A3B8]">
+              <FileText className="w-8 h-8 mx-auto mb-2 opacity-40 text-[#94A3B8]" />
+              <p className="text-xs font-medium text-[#00F0FF]">No documents uploaded yet.</p>
+              <p className="text-[11px] text-[#94A3B8] mt-1">Upload a PDF inside any chat to build your knowledge base.</p>
             </div>
           ) : (
             documents.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between bg-white border border-[#E5E2D9] rounded-xl p-3.5 hover:border-[#18181B]/20 transition-all shadow-sm group"
+                className="flex items-center justify-between bg-[#0B0F19] border border-[#232F48] rounded-xl p-3.5 hover:border-[#00F0FF]/40 transition-all shadow-md group"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 bg-[#FF5722]/10 border border-[#FF5722]/20 rounded-lg text-[#FF5722] shrink-0">
+                  <div className="p-2 bg-[#151C2C] border border-[#232F48] rounded-lg text-[#00F0FF] shrink-0">
                     <FileText className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-[#18181B] truncate" title={doc.filename}>
+                    <p className="text-xs font-semibold text-[#F1F5F9] truncate" title={doc.filename}>
                       {doc.filename}
                     </p>
-                    <p className="text-[10px] text-[#71717A] mt-0.5">
+                    <p className="text-[10px] text-[#94A3B8] mt-0.5">
                       {doc.parent_chunks} Parent Chunks · {doc.child_chunks} Vector Embeddings
                     </p>
                   </div>
@@ -117,11 +117,11 @@ export const DocumentModal: React.FC<Props> = ({ isOpen, onClose, onDocsChanged,
                 <button
                   onClick={() => handleDelete(doc.filename)}
                   disabled={deletingFile === doc.filename}
-                  className="p-2 text-[#71717A] hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors shrink-0 disabled:opacity-50 cursor-pointer"
+                  className="p-2 text-[#94A3B8] hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors shrink-0 disabled:opacity-50 cursor-pointer"
                   title="Delete Document"
                 >
                   {deletingFile === doc.filename ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-rose-600" />
+                    <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
                   ) : (
                     <Trash2 className="w-4 h-4" />
                   )}
@@ -132,11 +132,11 @@ export const DocumentModal: React.FC<Props> = ({ isOpen, onClose, onDocsChanged,
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 border-t border-[#E5E2D9] bg-white flex items-center justify-between text-xs text-[#71717A]">
-          <span>Total Documents: <strong className="text-[#18181B] font-semibold">{documents.length}</strong></span>
+        <div className="px-6 py-3.5 border-t border-[#232F48] bg-[#0B0F19] flex items-center justify-between text-xs text-[#94A3B8]">
+          <span>Total Documents: <strong className="text-[#00F0FF] font-semibold">{documents.length}</strong></span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-[#18181B] hover:bg-[#27272A] text-white rounded-xl transition-colors font-medium cursor-pointer"
+            className="px-4 py-1.5 bg-[#00F0FF] hover:bg-[#66F6FF] text-[#0B0F19] font-extrabold rounded-xl transition-colors cursor-pointer"
           >
             Close
           </button>

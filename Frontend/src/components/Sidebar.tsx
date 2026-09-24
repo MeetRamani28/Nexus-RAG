@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   Plus, Search, MessageSquare, Trash2, Edit2, Check, X,
-  ChevronRight, FolderOpen, Clock,
+  FolderOpen, Clock,
 } from "lucide-react";
 import type { ConversationListItem } from "../types";
 
@@ -75,30 +75,30 @@ export const Sidebar: React.FC<Props> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F5F2EB] border-r border-[#E5E2D9]">
-      {/* Top Action: New Chat Button (Sleek Dark Graphite Pill Button matching Screenshot 3) */}
-      <div className="p-3 border-b border-[#E5E2D9]">
+    <div className="flex flex-col h-full bg-[#151C2C] border-r border-[#232F48]">
+      {/* Top Action: New Chat Button (Luminous Cyber Cyan Button) */}
+      <div className="p-3 border-b border-[#232F48]">
         <button
           onClick={onNewChat}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#18181B] hover:bg-[#27272A] text-white rounded-xl text-sm font-semibold transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#00F0FF] hover:bg-[#66F6FF] text-[#0B0F19] rounded-xl text-sm font-extrabold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
         >
-          <Plus className="w-4 h-4 text-white" />
+          <Plus className="w-4 h-4 text-[#0B0F19]" />
           New Chat
         </button>
       </div>
 
       {/* Search */}
       <div className="px-3 py-2.5">
-        <div className="flex items-center gap-2 bg-white border border-[#E5E2D9] rounded-lg px-3 py-2 shadow-xs">
-          <Search className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+        <div className="flex items-center gap-2 bg-[#0B0F19] border border-[#232F48] rounded-lg px-3 py-2 shadow-inner">
+          <Search className="w-3.5 h-3.5 text-[#94A3B8] shrink-0" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search conversations..."
-            className="flex-1 bg-transparent text-xs text-[#18181B] placeholder-zinc-400 focus:outline-none"
+            className="flex-1 bg-transparent text-xs text-[#F1F5F9] placeholder-[#94A3B8]/60 focus:outline-none"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="text-zinc-400 hover:text-zinc-600 cursor-pointer">
+            <button onClick={() => setSearch("")} className="text-[#94A3B8] hover:text-[#00F0FF] cursor-pointer">
               <X className="w-3 h-3" />
             </button>
           )}
@@ -109,18 +109,18 @@ export const Sidebar: React.FC<Props> = ({
       <div className="flex-1 overflow-y-auto no-scrollbar px-2 pb-2">
         {conversations.length === 0 ? (
           <div className="text-center py-8 px-4 animate-in fade-in">
-            <MessageSquare className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
-            <p className="text-xs text-zinc-500 font-medium">No conversations yet</p>
-            <p className="text-[11px] text-zinc-400 mt-1">Click New Chat to begin</p>
+            <MessageSquare className="w-8 h-8 text-[#94A3B8]/40 mx-auto mb-2" />
+            <p className="text-xs text-[#00F0FF] font-medium">No conversations yet</p>
+            <p className="text-[11px] text-[#94A3B8] mt-1">Click New Chat to begin</p>
           </div>
         ) : filtered.length === 0 ? (
-          <p className="text-center text-xs text-zinc-500 py-6">No results for &ldquo;{search}&rdquo;</p>
+          <p className="text-center text-xs text-[#94A3B8] py-6">No results for &ldquo;{search}&rdquo;</p>
         ) : (
           Array.from(groups.entries()).map(([label, convs]) => (
             <div key={label} className="mb-3">
               <div className="flex items-center gap-2 px-2 mb-1.5">
-                <Clock className="w-2.5 h-2.5 text-zinc-400" />
-                <span className="text-[10px] uppercase tracking-widest font-semibold text-zinc-500">{label}</span>
+                <Clock className="w-2.5 h-2.5 text-[#94A3B8]" />
+                <span className="text-[10px] uppercase tracking-widest font-semibold text-[#94A3B8]">{label}</span>
               </div>
               {convs.map(conv => (
                 <div
@@ -128,11 +128,11 @@ export const Sidebar: React.FC<Props> = ({
                   onClick={() => onSelect(conv.id)}
                   className={`group relative flex items-center gap-2.5 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150 mb-0.5 ${
                     activeId === conv.id
-                      ? "bg-white border border-[#E5E2D9] text-[#18181B] shadow-sm font-semibold"
-                      : "hover:bg-white/60 text-zinc-600 hover:text-[#18181B] border border-transparent"
+                      ? "bg-[#0B0F19] border border-[#232F48] text-[#00F0FF] shadow-sm font-semibold"
+                      : "hover:bg-[#0B0F19]/60 text-[#F1F5F9]/80 hover:text-[#F1F5F9] border border-transparent"
                   }`}
                 >
-                  <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${activeId === conv.id ? "text-[#FF5722]" : "text-zinc-400"}`} />
+                  <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${activeId === conv.id ? "text-[#00F0FF]" : "text-[#94A3B8]"}`} />
 
                   {editId === conv.id ? (
                     <div className="flex-1 flex items-center gap-1" onClick={e => e.stopPropagation()}>
@@ -144,33 +144,33 @@ export const Sidebar: React.FC<Props> = ({
                           if (e.key === "Enter") commitEdit(conv.id, e);
                           if (e.key === "Escape") setEditId(null);
                         }}
-                        className="flex-1 bg-white text-[#18181B] text-xs rounded-lg px-2 py-1 border border-[#18181B] focus:outline-none min-w-0"
+                        className="flex-1 bg-[#0B0F19] text-[#F1F5F9] text-xs rounded-lg px-2 py-1 border border-[#00F0FF] focus:outline-none min-w-0"
                       />
-                      <button onClick={e => commitEdit(conv.id, e)} className="text-emerald-600 hover:text-emerald-700 p-0.5 cursor-pointer">
+                      <button onClick={e => commitEdit(conv.id, e)} className="text-emerald-400 hover:text-emerald-300 p-0.5 cursor-pointer">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={e => { e.stopPropagation(); setEditId(null); }} className="text-zinc-400 hover:text-zinc-600 p-0.5 cursor-pointer">
+                      <button onClick={e => { e.stopPropagation(); setEditId(null); }} className="text-[#94A3B8] hover:text-[#F1F5F9] p-0.5 cursor-pointer">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ) : (
                     <>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-[13px] truncate leading-tight ${activeId === conv.id ? 'text-[#18181B] font-semibold' : 'text-zinc-700 group-hover:text-[#18181B] transition-colors'}`}>{conv.title}</p>
+                        <p className={`text-[13px] truncate leading-tight ${activeId === conv.id ? 'text-[#00F0FF] font-semibold' : 'text-[#F1F5F9]/90 group-hover:text-[#F1F5F9] transition-colors'}`}>{conv.title}</p>
                         {conv.message_count > 0 && (
-                          <p className={`text-[10px] mt-0.5 ${activeId === conv.id ? 'text-zinc-500' : 'text-zinc-400'}`}>{conv.message_count} {conv.message_count === 1 ? "query" : "queries"}</p>
+                          <p className={`text-[10px] mt-0.5 ${activeId === conv.id ? 'text-[#94A3B8]' : 'text-[#94A3B8]/70'}`}>{conv.message_count} {conv.message_count === 1 ? "query" : "queries"}</p>
                         )}
                       </div>
                       <div className="hidden group-hover:flex items-center gap-1 shrink-0 ml-2">
                         <button
                           onClick={e => startEdit(conv, e)}
-                          className="p-1 text-zinc-400 hover:text-zinc-700 rounded-md hover:bg-zinc-100 transition-all cursor-pointer"
+                          className="p-1 text-[#94A3B8] hover:text-[#00F0FF] rounded-md hover:bg-[#0B0F19] transition-all cursor-pointer"
                         >
                           <Edit2 className="w-3 h-3" />
                         </button>
                         <button
                           onClick={e => { e.stopPropagation(); onDelete(conv.id); }}
-                          className="p-1 text-zinc-400 hover:text-rose-600 rounded-md hover:bg-rose-50 transition-all cursor-pointer"
+                          className="p-1 text-[#94A3B8] hover:text-rose-400 rounded-md hover:bg-rose-950/40 transition-all cursor-pointer"
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
@@ -185,21 +185,20 @@ export const Sidebar: React.FC<Props> = ({
       </div>
 
       {/* Documents Footer */}
-      <div className="border-t border-[#E5E2D9] p-3">
+      <div className="border-t border-[#232F48] p-3">
         <button
           onClick={onOpenDocs}
-          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white hover:bg-zinc-50 border border-[#E5E2D9] shadow-xs transition-all group cursor-pointer"
+          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-[#0B0F19] hover:bg-[#0B0F19]/80 border border-[#232F48] shadow-sm transition-all group cursor-pointer"
         >
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-lg bg-orange-50 border border-orange-200 flex items-center justify-center">
-              <FolderOpen className="w-3.5 h-3.5 text-[#FF5722]" />
+            <div className="w-6 h-6 rounded-lg bg-[#151C2C] border border-[#232F48] flex items-center justify-center">
+              <FolderOpen className="w-3.5 h-3.5 text-[#00F0FF]" />
             </div>
             <div className="text-left">
-              <p className="text-xs font-semibold text-[#18181B]">Documents</p>
-              <p className="text-[10px] text-zinc-500">{docCount} file{docCount !== 1 ? "s" : ""} indexed</p>
+              <p className="text-xs font-semibold text-[#00F0FF]">Documents</p>
+              <p className="text-[10px] text-[#94A3B8]">{docCount} file{docCount !== 1 ? "s" : ""} indexed</p>
             </div>
           </div>
-          <ChevronRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-600 transition-colors" />
         </button>
       </div>
     </div>

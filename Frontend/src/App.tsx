@@ -18,15 +18,15 @@ const UniversalSplashScreen: React.FC<{ title?: string; subtitle?: string }> = (
   title = "Nexus Intelligence Engine",
   subtitle = "Connecting backend services...",
 }) => (
-  <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#F8F6F0] text-[#18181B] font-sans z-50 overflow-hidden">
+  <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#0B0F19] text-[#F1F5F9] font-sans z-50 overflow-hidden">
     <div className="flex flex-col items-center justify-center gap-5 z-10 p-6 text-center max-w-sm">
       <Nexus3DLogo size={70} interactive={true} />
       <div className="space-y-1.5">
-        <h2 className="text-base font-bold tracking-tight text-[#18181B]">{title}</h2>
-        <p className="text-xs text-zinc-500 leading-relaxed">{subtitle}</p>
+        <h2 className="text-base font-bold tracking-tight text-[#00F0FF]">{title}</h2>
+        <p className="text-xs text-[#94A3B8] leading-relaxed">{subtitle}</p>
       </div>
-      <div className="w-36 h-1 bg-[#E5E2D9] rounded-full overflow-hidden mt-2">
-        <div className="h-full bg-gradient-to-r from-[#FF5722] via-orange-400 to-[#FF5722] animate-pulse w-full" />
+      <div className="w-36 h-1 bg-[#151C2C] rounded-full overflow-hidden mt-2">
+        <div className="h-full bg-gradient-to-r from-[#00F0FF] via-[#94A3B8] to-[#00F0FF] animate-pulse w-full" />
       </div>
     </div>
   </div>
@@ -204,16 +204,17 @@ const MainApp: React.FC = () => {
     }
   };
 
+  // Instant 1-Click Conversation Deletion
   const handleDeleteConversation = async (id: string, showToast = true) => {
     try {
-      setConversations((prev) => prev.filter((c) => c.id !== id));
-      setActiveConversationId((prevActive) => {
-        if (prevActive === id) {
-          const remaining = conversations.filter((c) => c.id !== id);
-          return remaining.length > 0 ? remaining[0].id : null;
-        }
-        return prevActive;
+      let nextActiveId: string | null = null;
+      setConversations((prev) => {
+        const remaining = prev.filter((c) => c.id !== id);
+        nextActiveId = remaining.length > 0 ? remaining[0].id : null;
+        return remaining;
       });
+      setActiveConversationId(nextActiveId);
+
       if (showToast) {
         toast.success("Conversation deleted", { id: "conv-delete" });
       }
@@ -252,13 +253,13 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#F8F6F0] text-[#18181B] font-sans overflow-hidden" style={{ touchAction: 'pan-y' }}>
-      {/* ── Top Header (Light Mode) ─────────────────────────────────── */}
-      <header className="h-14 border-b border-[#E5E2D9] bg-white/90 backdrop-blur-md px-4 flex items-center justify-between shrink-0 z-40 relative shadow-sm">
+    <div className="fixed inset-0 flex flex-col bg-[#0B0F19] text-[#F1F5F9] font-sans overflow-hidden" style={{ touchAction: 'pan-y' }}>
+      {/* ── Top Header (Electric Cyber Cyan & Void Slate) ─────────────────────────────────── */}
+      <header className="h-14 border-b border-[#232F48] bg-[#151C2C] px-4 flex items-center justify-between shrink-0 z-40 relative shadow-sm">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen((v) => !v)}
-            className="p-1.5 rounded-lg text-zinc-600 hover:text-[#18181B] hover:bg-zinc-100 transition-colors md:hidden"
+            className="p-1.5 rounded-lg text-[#00F0FF] hover:text-white hover:bg-[#0B0F19] transition-colors md:hidden"
             title={sidebarOpen ? "Close Menu" : "Open Menu"}
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -266,49 +267,49 @@ const MainApp: React.FC = () => {
           
           <button
             onClick={() => setSidebarOpen((v) => !v)}
-            className="hidden md:block p-1.5 rounded-lg text-zinc-600 hover:text-[#18181B] hover:bg-zinc-100 transition-colors"
+            className="hidden md:block p-1.5 rounded-lg text-[#00F0FF] hover:text-white hover:bg-[#0B0F19] transition-colors"
             title={sidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
           >
-            {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4 text-[#FF5722]" />}
+            {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4 text-[#00F0FF]" />}
           </button>
 
           <div className="flex items-center gap-2">
             <Nexus3DLogo size={32} interactive={false} />
             <div>
-              <h1 className="text-sm font-bold tracking-tight text-[#18181B] leading-none">Nexus-RAG</h1>
-              <p className="text-[10px] text-zinc-500 leading-none mt-0.5 hidden sm:block">Agentic Document Intelligence</p>
+              <h1 className="text-sm font-bold tracking-tight text-[#00F0FF] leading-none">Nexus-RAG</h1>
+              <p className="text-[10px] text-[#94A3B8] leading-none mt-0.5 hidden sm:block">Agentic Document Intelligence</p>
             </div>
           </div>
         </div>
 
         {/* System Badges & Auth */}
         <div className="flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-1.5 bg-white border border-[#E5E2D9] px-2.5 py-1 rounded-lg text-zinc-700 shadow-sm">
-            <Database className="w-3.5 h-3.5 text-indigo-600" />
-            <span className="text-[11px] font-semibold uppercase text-zinc-600">{systemInfo?.vector_provider ?? "QDRANT"}</span>
+          <div className="hidden lg:flex items-center gap-1.5 bg-[#0B0F19] border border-[#232F48] px-2.5 py-1 rounded-lg text-[#00F0FF] shadow-sm">
+            <Database className="w-3.5 h-3.5 text-[#00F0FF]" />
+            <span className="text-[11px] font-semibold uppercase text-[#F1F5F9]">{systemInfo?.vector_provider ?? "QDRANT"}</span>
           </div>
 
-          <div className="hidden lg:flex items-center gap-1.5 bg-white border border-[#E5E2D9] px-2.5 py-1 rounded-lg text-zinc-700 shadow-sm">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="text-[11px] text-zinc-600 font-medium">Cohere Rerank</span>
+          <div className="hidden lg:flex items-center gap-1.5 bg-[#0B0F19] border border-[#232F48] px-2.5 py-1 rounded-lg text-[#F1F5F9] shadow-sm">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-[11px] text-[#F1F5F9] font-medium">Cohere Rerank</span>
           </div>
 
           {systemInfo?.hyde_enabled && (
-            <div className="hidden sm:flex items-center gap-1.5 bg-orange-50 border border-orange-200 px-2 py-1 rounded-lg">
-              <Zap className="w-3.5 h-3.5 text-[#FF5722]" />
-              <span className="text-[11px] text-[#FF5722] font-semibold">HyDE Active</span>
+            <div className="hidden sm:flex items-center gap-1.5 bg-[#0B0F19] border border-[#94A3B8]/40 px-2 py-1 rounded-lg">
+              <Zap className="w-3.5 h-3.5 text-[#00F0FF]" />
+              <span className="text-[11px] text-[#00F0FF] font-semibold">HyDE Active</span>
             </div>
           )}
 
-          <div className="flex items-center gap-2 pl-2 border-l border-[#E5E2D9]">
+          <div className="flex items-center gap-2 pl-2 border-l border-[#232F48]">
              <div className="hidden md:flex flex-col items-end mr-1">
-                 <span className="text-xs font-semibold text-[#18181B]">{user?.firstName || user?.username || 'User'}</span>
-                 <span className="text-[10px] text-zinc-500">{user?.primaryEmailAddress?.emailAddress}</span>
+                 <span className="text-xs font-semibold text-[#F1F5F9]">{user?.firstName || user?.username || 'User'}</span>
+                 <span className="text-[10px] text-[#94A3B8]">{user?.primaryEmailAddress?.emailAddress}</span>
              </div>
              <UserButton 
                 appearance={{
                   elements: {
-                    userButtonAvatarBox: "w-8 h-8 border-2 border-[#E5E2D9]"
+                    userButtonAvatarBox: "w-8 h-8 border-2 border-[#00F0FF]"
                   }
                 }}
              />
@@ -318,7 +319,7 @@ const MainApp: React.FC = () => {
 
       {/* Universal Top Progress Line when fetching data */}
       {isLoadingConversations && (
-        <div className="h-0.5 w-full bg-[#FF5722] animate-pulse shrink-0 z-50" />
+        <div className="h-0.5 w-full bg-[#00F0FF] animate-pulse shrink-0 z-50" />
       )}
 
       {/* ── Body Layout ────────────────────────────────────────── */}
@@ -326,7 +327,7 @@ const MainApp: React.FC = () => {
         {/* Mobile Backdrop */}
         {sidebarOpen && (
           <div 
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm z-30 md:hidden"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -355,7 +356,7 @@ const MainApp: React.FC = () => {
         </aside>
 
         {/* Main Chat Interface */}
-        <main className="flex-1 min-w-0 bg-[#F8F6F0] flex flex-col h-full overflow-hidden w-full relative z-10">
+        <main className="flex-1 min-w-0 bg-[#0B0F19] flex flex-col h-full overflow-hidden w-full relative z-10">
           <ChatInterface
             conversationId={activeConversationId}
             onDocUploaded={fetchDocCount}
@@ -384,9 +385,9 @@ export const App: React.FC = () => {
         position="top-center"
         toastOptions={{
           style: {
-            background: "#18181b",
-            border: "1px solid #3f3f46",
-            color: "#f4f4f5",
+            background: "#151C2C",
+            border: "1px solid #232F48",
+            color: "#F1F5F9",
             fontSize: "13px",
           },
         }}

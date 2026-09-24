@@ -27,25 +27,25 @@ export const Nexus3DLogo: React.FC<Nexus3DLogoProps> = ({ size = 120, interactiv
     renderer.setClearColor(0x000000, 0); // Transparent
     container.appendChild(renderer.domElement);
 
-    // 4. Lights optimized for Light Mode
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    // 4. Lights optimized for Electric Cyber Cyan Dark Mode
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
     scene.add(ambientLight);
 
-    const pointLight = new THREE.PointLight(0xff5722, 3, 10); // Vibrant Coral
+    const pointLight = new THREE.PointLight(0x00f0ff, 4, 10); // Luminous Cyber Cyan
     pointLight.position.set(2, 2, 2);
     scene.add(pointLight);
 
-    const pointLight2 = new THREE.PointLight(0x27272a, 2, 10); // Dark Charcoal
+    const pointLight2 = new THREE.PointLight(0x94a3b8, 3, 10); // Cool Slate Accent
     pointLight2.position.set(-2, -2, 2);
     scene.add(pointLight2);
 
-    // 5. Light-Mode 3D Prism Group
+    // 5. 3D Cyber Cyan Prism Group
     const logoGroup = new THREE.Group();
 
-    // Outer Wireframe Crystal Octahedron (#27272A - Dark Charcoal for light mode contrast)
+    // Outer Wireframe Crystal Octahedron (#94A3B8 - Cool Slate)
     const outerGeo = new THREE.OctahedronGeometry(0.85, 0);
     const outerMat = new THREE.MeshBasicMaterial({
-      color: 0x27272a,
+      color: 0x94a3b8,
       wireframe: true,
       transparent: true,
       opacity: 0.9,
@@ -53,10 +53,10 @@ export const Nexus3DLogo: React.FC<Nexus3DLogoProps> = ({ size = 120, interactiv
     const outerMesh = new THREE.Mesh(outerGeo, outerMat);
     logoGroup.add(outerMesh);
 
-    // Inner Solid Core Diamond (#FF5722 - Vibrant Coral)
+    // Inner Solid Core Diamond (#00F0FF - Luminous Cyber Cyan)
     const innerGeo = new THREE.OctahedronGeometry(0.48, 0);
     const innerMat = new THREE.MeshStandardMaterial({
-      color: 0xff5722,
+      color: 0x00f0ff,
       roughness: 0.1,
       metalness: 0.9,
       transparent: true,
@@ -65,12 +65,12 @@ export const Nexus3DLogo: React.FC<Nexus3DLogoProps> = ({ size = 120, interactiv
     const innerMesh = new THREE.Mesh(innerGeo, innerMat);
     logoGroup.add(innerMesh);
 
-    // Subtle Slate Ring (#71717A)
+    // Subtle Cyan Orbit Ring (#00F0FF)
     const ringGeo = new THREE.TorusGeometry(1.05, 0.018, 16, 64);
     const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x71717a,
+      color: 0x00f0ff,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.85,
     });
     const ringMesh = new THREE.Mesh(ringGeo, ringMat);
     ringMesh.rotation.x = Math.PI / 3;
