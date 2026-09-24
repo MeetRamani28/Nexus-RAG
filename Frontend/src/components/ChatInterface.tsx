@@ -158,11 +158,13 @@ export const ChatInterface: React.FC<Props> = ({
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; name: string } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Fetch Available Models from Groq via backend — shows only live models
   useEffect(() => {
@@ -282,39 +284,108 @@ export const ChatInterface: React.FC<Props> = ({
     URL.revokeObjectURL(url);
   };
 
-  // Handle PDF Upload via Attachment Button
-  const handlePdfUpload = async (file: File) => {
-    if (!file.name.endsWith(".pdf")) return;
-    setAttachedFile(file);
+  // Cancel / Abort PDF upload & detach current PDF
+  const handleCancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setAttachedFile(null);
+    setUploadingPdf(false);
+    setUploadProgress(null);
+    setUploadMessage(null);
+    setActiveSourceFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    toast.info("PDF upload canceled", { id: "pdf-cancel" });
+  };
+
+  // Handle PDF Upload (Supports Single & Multiple PDF Selection)
+  const handlePdfUpload = async (incomingFiles: FileList | File[] | File) => {
+    const fileList: File[] = incomingFiles instanceof FileList 
+      ? Array.from(incomingFiles) 
+      : Array.isArray(incomingFiles) 
+      ? incomingFiles 
+      : [incomingFiles];
+
+    const pdfFiles = fileList.filter((f) => f.name.toLowerCase().endsWith(".pdf"));
+    if (pdfFiles.length === 0) {
+      toast.error("Please select valid PDF file(s).");
+      return;
+    }
+
+    setAttachedFile(pdfFiles[0]);
     setUploadingPdf(true);
     setUploadMessage(null);
 
-    const formData = new FormData();
-    formData.append("file", file);
-    if (conversationId) {
-      formData.append("conversation_id", conversationId);
-    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
+    let processedCount = 0;
+    let lastFilename = "";
 
     try {
-      const res = await fetchAuth(`${API_BASE_URL}/api/v1/ingest`, {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) throw new Error(res.statusText);
-      const data: IngestResponse = await res.json();
-      setActiveSourceFile(data.filename);
-      setUploadMessage(
-        data.duplicate
-          ? `Recognized existing "${data.filename}". Ready for instant Q&A!`
-          : `Processed "${data.filename}" (${data.child_chunks_created} vectors)`
-      );
-      onDocUploaded();
-      onConversationUpdated?.();
-      fetchExistingDocs();
+      for (let i = 0; i < pdfFiles.length; i++) {
+        if (signal.aborted) break;
+        const currentFile = pdfFiles[i];
+        setAttachedFile(currentFile);
+        setUploadProgress({
+          current: i + 1,
+          total: pdfFiles.length,
+          name: currentFile.name,
+        });
+
+        const formData = new FormData();
+        formData.append("file", currentFile);
+        if (conversationId) {
+          formData.append("conversation_id", conversationId);
+        }
+
+        const res = await fetchAuth(`${API_BASE_URL}/api/v1/ingest`, {
+          method: "POST",
+          body: formData,
+          signal,
+        });
+
+        if (signal.aborted) break;
+        if (!res.ok) throw new Error(`Upload failed for ${currentFile.name}`);
+
+        const data: IngestResponse = await res.json();
+        lastFilename = data.filename;
+        processedCount++;
+      }
+
+      if (!signal.aborted && processedCount > 0) {
+        setActiveSourceFile(lastFilename);
+        setUploadMessage(
+          pdfFiles.length === 1
+            ? `Processed "${lastFilename}"`
+            : `Successfully processed ${processedCount} PDF document(s)`
+        );
+        toast.success(
+          pdfFiles.length === 1
+            ? `Processed "${lastFilename}"`
+            : `Ingested ${processedCount} PDF documents into Knowledge Base!`
+        );
+        onDocUploaded();
+        onConversationUpdated?.();
+        fetchExistingDocs();
+      }
     } catch (e: unknown) {
-      setUploadMessage(e instanceof Error ? e.message : "Upload failed");
+      if ((e as Error)?.name === "AbortError") {
+        setUploadMessage("Upload canceled.");
+      } else {
+        setUploadMessage(e instanceof Error ? e.message : "Upload failed");
+        toast.error(e instanceof Error ? e.message : "Upload failed");
+      }
     } finally {
       setUploadingPdf(false);
+      setUploadProgress(null);
+      abortControllerRef.current = null;
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -338,7 +409,7 @@ export const ChatInterface: React.FC<Props> = ({
 
   // Check if a document is bound to this conversation session
   const hasDocument = activeSourceFile !== null || attachedFile !== null || (uploadMessage !== null && !uploadMessage.includes("failed"));
-  const isInputDisabled = isStreaming || !hasDocument;
+  const isInputDisabled = isStreaming || uploadingPdf || !hasDocument;
 
   // Send Message
   const sendMessage = async (questionText: string) => {
@@ -534,15 +605,17 @@ export const ChatInterface: React.FC<Props> = ({
       {isFetchingMessages && (
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#FF5722] via-indigo-500 to-[#FF5722] animate-pulse z-50" />
       )}
-      {/* Hidden File Input */}
+      {/* Hidden File Input (Multiple PDF Support) */}
       <input
         ref={fileInputRef}
         type="file"
         accept=".pdf"
+        multiple
         className="hidden"
         onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) handlePdfUpload(f);
+          if (e.target.files && e.target.files.length > 0) {
+            handlePdfUpload(e.target.files);
+          }
         }}
       />
 
@@ -579,8 +652,10 @@ export const ChatInterface: React.FC<Props> = ({
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
-                    const f = e.dataTransfer.files?.[0];
-                    if (f) handlePdfUpload(f);
+                    const files = Array.from(e.dataTransfer.files).filter(
+                      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
+                    );
+                    if (files.length > 0) handlePdfUpload(files);
                   }}
                   className="flex flex-col items-center justify-center border-2 border-dashed border-[#E5E2D9] hover:border-[#FF5722]/60 rounded-3xl p-8 cursor-pointer transition-all duration-300 bg-white hover:bg-[#F5F2EB] group shadow-sm"
                 >
@@ -588,16 +663,24 @@ export const ChatInterface: React.FC<Props> = ({
                     <FileText className="w-6 h-6 text-[#FF5722]" />
                   </div>
                   <p className="text-sm font-semibold text-[#18181B] mb-1">
-                    {attachedFile ? attachedFile.name : "Drop PDF here or click to browse"}
+                    {uploadProgress
+                      ? `Uploading PDF ${uploadProgress.current} of ${uploadProgress.total}: ${uploadProgress.name}`
+                      : attachedFile
+                      ? attachedFile.name
+                      : "Drop single or multiple PDFs here or click to browse"}
                   </p>
-                  <p className="text-[11px] text-[#71717A]">Upload a PDF for this new chat session</p>
+                  <p className="text-[11px] text-[#71717A]">Upload PDF documents to start analyzing</p>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="mt-4 px-4 py-2 bg-[#18181B] hover:bg-[#27272A] text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                    disabled={uploadingPdf}
+                    className="mt-4 px-4 py-2 bg-[#18181B] hover:bg-[#27272A] disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Plus className="w-3.5 h-3.5 text-[#FF5722]" />
-                    Select New PDF Document
+                    {uploadingPdf ? (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin text-[#FF5722]" /><span>Processing PDF(s)...</span></>
+                    ) : (
+                      <><Plus className="w-3.5 h-3.5 text-[#FF5722]" /><span>Select PDF Document(s)</span></>
+                    )}
                   </button>
                 </label>
 
@@ -810,7 +893,7 @@ export const ChatInterface: React.FC<Props> = ({
           )}
 
           {/* Attached PDF Status Notification if any */}
-          {(attachedFile || uploadingPdf || uploadMessage) && (
+          {(attachedFile || uploadingPdf || uploadMessage || uploadProgress || activeSourceFile) && (
             <div className="mb-2 flex items-center justify-between px-3.5 py-2 bg-white border border-[#E5E2D9] rounded-xl text-xs shadow-sm">
               <div className="flex items-center gap-2 min-w-0">
                 {uploadingPdf ? (
@@ -819,7 +902,9 @@ export const ChatInterface: React.FC<Props> = ({
                   <FileText className="w-3.5 h-3.5 text-[#FF5722] shrink-0" />
                 )}
                 <span className="text-[#18181B] font-semibold truncate">
-                  {attachedFile?.name || "Uploading..."}
+                  {uploadProgress
+                    ? `Uploading PDF ${uploadProgress.current} of ${uploadProgress.total}: ${uploadProgress.name}`
+                    : attachedFile?.name || activeSourceFile || "PDF Document Attached"}
                 </span>
                 {uploadMessage && (
                   <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-medium">
@@ -829,13 +914,12 @@ export const ChatInterface: React.FC<Props> = ({
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setAttachedFile(null);
-                  setUploadMessage(null);
-                }}
-                className="text-[#71717A] hover:text-[#18181B] p-0.5 cursor-pointer"
+                onClick={handleCancelUpload}
+                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg transition-colors flex items-center gap-1 text-[11px] font-semibold cursor-pointer shrink-0"
+                title="Cancel PDF upload / detach document"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3.5 h-3.5 text-rose-600" />
+                <span>Cancel</span>
               </button>
             </div>
           )}
@@ -857,6 +941,8 @@ export const ChatInterface: React.FC<Props> = ({
               placeholder={
                 isStreaming
                   ? "Agent is processing query..."
+                  : uploadingPdf
+                  ? "⏳ Ingesting & embedding PDF document(s)... Please wait."
                   : !hasDocument
                   ? "🔒 Upload a PDF document above to unlock prompt input..."
                   : "Ask anything about your documents..."

@@ -11,13 +11,15 @@ interface PdfUploaderProps {
 }
 
 export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<IngestResponse | null>(null);
   const [documents, setDocuments] = useState<IngestedDocument[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
+  const abortRef = React.useRef<AbortController | null>(null);
 
   const fetchDocuments = useCallback(async () => {
     setDocsLoading(true);
@@ -34,24 +36,24 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
   useEffect(() => { fetchDocuments(); }, [fetchDocuments]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      const selected = e.target.files[0];
-      if (selected.type === "application/pdf") {
-        setFile(selected);
+    if (e.target.files && e.target.files.length > 0) {
+      const selected = Array.from(e.target.files).filter(f => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
+      if (selected.length > 0) {
+        setFiles(selected);
         setError(null);
         setLastResult(null);
       } else {
-        setError("Please select a valid PDF file.");
-        setFile(null);
+        setError("Please select valid PDF file(s).");
+        setFiles([]);
       }
     }
   };
 
   const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
-    const dropped = e.dataTransfer.files[0];
-    if (dropped?.type === "application/pdf") {
-      setFile(dropped);
+    const dropped = Array.from(e.dataTransfer.files).filter(f => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
+    if (dropped.length > 0) {
+      setFiles(dropped);
       setError(null);
       setLastResult(null);
     } else {
@@ -59,29 +61,60 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
     }
   };
 
+  const handleCancel = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    setFiles([]);
+    setLoading(false);
+    setUploadProgress(null);
+    setError(null);
+  };
+
   const handleUpload = async () => {
-    if (!file) return;
+    if (files.length === 0) return;
     setLoading(true);
     setError(null);
-    const formData = new FormData();
-    formData.append("file", file);
+    abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
+
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/ingest`, {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) throw new Error(`Upload failed: ${response.statusText}`);
-      const result: IngestResponse = await response.json();
-      setLastResult(result);
-      if (!result.duplicate) {
-        onIngestSuccess(result);
-        await fetchDocuments();
+      for (let i = 0; i < files.length; i++) {
+        if (signal.aborted) break;
+        const currentFile = files[i];
+        setUploadProgress({ current: i + 1, total: files.length, name: currentFile.name });
+        const formData = new FormData();
+        formData.append("file", currentFile);
+
+        const response = await fetch(`${API_BASE_URL}/api/v1/ingest`, {
+          method: "POST",
+          body: formData,
+          signal,
+        });
+
+        if (signal.aborted) break;
+        if (!response.ok) throw new Error(`Upload failed for ${currentFile.name}`);
+        const result: IngestResponse = await response.json();
+        setLastResult(result);
+        if (!result.duplicate) {
+          onIngestSuccess(result);
+        }
       }
-      setFile(null);
+      if (!signal.aborted) {
+        await fetchDocuments();
+        setFiles([]);
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error processing document");
+      if ((err as Error)?.name === "AbortError") {
+        setError("Upload canceled.");
+      } else {
+        setError(err instanceof Error ? err.message : "Error processing document");
+      }
     } finally {
       setLoading(false);
+      setUploadProgress(null);
+      abortRef.current = null;
     }
   };
 
@@ -110,6 +143,14 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
             </div>
             <h2 className="text-sm font-semibold text-[#18181B]">Upload PDF</h2>
           </div>
+          {loading && (
+            <button
+              onClick={handleCancel}
+              className="text-xs text-rose-600 font-semibold border border-rose-200 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+            >
+              Cancel Upload
+            </button>
+          )}
         </div>
 
         <label
@@ -119,10 +160,14 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
         >
           <FileText className="w-7 h-7 text-[#FF5722] mb-2" />
           <span className="text-sm font-medium text-[#18181B] text-center">
-            {file ? file.name : "Click or drag PDF here"}
+            {uploadProgress
+              ? `Uploading ${uploadProgress.current} of ${uploadProgress.total}: ${uploadProgress.name}`
+              : files.length > 0
+              ? `${files.length} PDF file(s) selected: ${files.map(f => f.name).join(", ")}`
+              : "Click or drag single or multiple PDFs here"}
           </span>
           <span className="text-xs text-[#71717A] mt-1">Multi-page financial & technical PDFs</span>
-          <input type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
+          <input type="file" accept=".pdf" multiple className="hidden" onChange={handleFileChange} />
         </label>
 
         {error && (
@@ -149,13 +194,13 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
 
         <button
           onClick={handleUpload}
-          disabled={!file || loading}
+          disabled={files.length === 0 || loading}
           className="mt-3 w-full py-2.5 px-4 bg-[#18181B] hover:bg-[#27272A] disabled:bg-zinc-200 disabled:text-zinc-400 text-white rounded-xl font-medium text-sm transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed shadow-sm"
         >
           {loading ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /><span>Ingesting...</span></>
+            <><Loader2 className="w-4 h-4 animate-spin text-[#FF5722]" /><span>Processing PDF(s)...</span></>
           ) : (
-            <span>Process & Embed PDF</span>
+            <span>Process & Embed PDF(s)</span>
           )}
         </button>
       </div>

@@ -44,13 +44,15 @@ const MainApp: React.FC = () => {
   const [docModalOpen, setDocModalOpen] = useState(false);
   const [docCount, setDocCount] = useState(0);
 
-  // Show login toast ONLY AFTER backend is awake and app is fully ready
-  const hasToastedRef = React.useRef(false);
+  // Show login toast ONLY ONCE per session (NOT on page refresh / Ctrl+Shift+R)
   useEffect(() => {
-    if (user && !isBackendWakingUp && !hasToastedRef.current) {
-      hasToastedRef.current = true;
-      const name = user.firstName || user.username || user.primaryEmailAddress?.emailAddress || "User";
-      toast.success(`Logged in successfully! Welcome back, ${name}.`);
+    if (user && !isBackendWakingUp) {
+      const toasted = sessionStorage.getItem("welcome_toasted");
+      if (!toasted) {
+        sessionStorage.setItem("welcome_toasted", "true");
+        const name = user.firstName || user.username || user.primaryEmailAddress?.emailAddress || "User";
+        toast.success(`Logged in successfully! Welcome back, ${name}.`);
+      }
     }
   }, [user, isBackendWakingUp]);
 
@@ -202,15 +204,22 @@ const MainApp: React.FC = () => {
     }
   };
 
-  const handleDeleteConversation = async (id: string) => {
+  const handleDeleteConversation = async (id: string, showToast = true) => {
     try {
       setConversations((prev) => prev.filter((c) => c.id !== id));
-      if (activeConversationId === id) {
-        const remaining = conversations.filter((c) => c.id !== id);
-        setActiveConversationId(remaining.length > 0 ? remaining[0].id : null);
+      setActiveConversationId((prevActive) => {
+        if (prevActive === id) {
+          const remaining = conversations.filter((c) => c.id !== id);
+          return remaining.length > 0 ? remaining[0].id : null;
+        }
+        return prevActive;
+      });
+      if (showToast) {
+        toast.success("Conversation deleted", { id: "conv-delete" });
       }
-      toast.success("Conversation deleted");
-      await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`, { method: "DELETE" });
+      if (!id.startsWith("conv-")) {
+        await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`, { method: "DELETE" });
+      }
     } catch {
       // ignore
     }
@@ -220,18 +229,18 @@ const MainApp: React.FC = () => {
     setConversations((prev) =>
       prev.map((c) => (c.id === id ? { ...c, title } : c))
     );
-    toast.success("Conversation renamed");
+    toast.success("Conversation renamed", { id: "conv-rename" });
   };
 
   const selectConversation = (id: string) => {
     const current = conversations.find(c => c.id === activeConversationId);
-    if (current && current.message_count === 0 && !current.source_file && current.id !== id) {
-      handleDeleteConversation(current.id);
+    if (current && current.message_count === 0 && !current.source_file && current.id !== id && current.id.startsWith("conv-")) {
+      handleDeleteConversation(current.id, false);
     }
     
     setActiveConversationId(id);
     if (window.innerWidth < 768) setSidebarOpen(false);
-  }
+  };
 
   if (isBackendWakingUp) {
     return (

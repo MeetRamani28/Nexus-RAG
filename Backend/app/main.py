@@ -2,6 +2,7 @@ import os
 import json
 import asyncio
 import tempfile
+import uuid
 from typing import List, Optional
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request, Response
@@ -12,6 +13,8 @@ from slowapi.errors import RateLimitExceeded
 from sse_starlette.sse import EventSourceResponse
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
+
+load_dotenv()
 
 from app.schemas.payload import (
     QueryRequest,
@@ -31,8 +34,6 @@ from app.llm_manager import get_active_llm_model_name
 from app.db.database import get_db, init_db
 from app.db import crud
 from app.auth import get_current_user_id
-
-load_dotenv()
 
 # ─── Rate Limiter ─────────────────────────────────────────────────────────────
 limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
@@ -369,8 +370,10 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                 "error": None,
             }
             
+            thread_id = payload.conversation_id or str(uuid.uuid4())
+            config = {"configurable": {"thread_id": thread_id}}
             final_state = {}
-            for step in rag_graph.stream(initial_state):
+            for step in rag_graph.stream(initial_state, config=config):
                 for node_name, state_update in step.items():
                     final_state.update(state_update)
                     if node_name == "retrieve":
