@@ -38,9 +38,10 @@ def rerank_node(state: RAGState) -> Dict[str, Any]:
         return {"reranked_documents": [], "citation_sources": []}
 
     try:
-        reranked_docs = reranker_instance.rerank_documents(query, candidate_docs)
+        reranked_docs = reranker_instance.rerank_documents(query, candidate_docs[:6])
         if not reranked_docs:
             reranked_docs = candidate_docs[:4]
+
     except Exception as e:
         print(f"[Rerank Fallback]: {e}")
         reranked_docs = candidate_docs[:4]

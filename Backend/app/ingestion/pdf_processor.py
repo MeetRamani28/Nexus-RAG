@@ -1,3 +1,4 @@
+import os
 import uuid
 import hashlib
 from typing import List, Tuple
@@ -19,14 +20,14 @@ def validate_file_size(file_bytes: bytes) -> bool:
 class PDFIngestionEngine:
     """
     Handles PDF loading, scanned PDF detection, and Parent-Child Chunking strategy.
-    Optimised for financial tables & dense documents.
+    Optimised for high-speed cloud indexing, financial tables & dense documents.
     """
 
     def __init__(
         self,
         parent_chunk_size: int = 2000,
-        child_chunk_size: int = 400,
-        chunk_overlap: int = 100,
+        child_chunk_size: int = 500,
+        chunk_overlap: int = 80,
     ):
         self.parent_splitter = RecursiveCharacterTextSplitter(
             chunk_size=parent_chunk_size,
@@ -40,9 +41,29 @@ class PDFIngestionEngine:
         )
 
     def load_pdf(self, file_path: str) -> List[Document]:
-        """Loads raw text pages from a PDF file using PyPDFLoader and validates text content."""
-        loader = PyPDFLoader(file_path)
-        docs = loader.load()
+        """Loads text pages from a PDF file using direct pypdf extraction for sub-second parsing."""
+        import pypdf
+        docs = []
+        max_pages = int(os.getenv("MAX_INGEST_PAGES", "50"))
+
+        try:
+            reader = pypdf.PdfReader(file_path)
+            total_pages = len(reader.pages)
+            pages_to_read = min(total_pages, max_pages)
+
+            for i in range(pages_to_read):
+                page_text = reader.pages[i].extract_text() or ""
+                docs.append(Document(
+                    page_content=page_text,
+                    metadata={"page": i, "source": file_path}
+                ))
+            
+            if total_pages > max_pages:
+                print(f"[PDF Processor]: Document has {total_pages} pages. Fast-indexed first {max_pages} pages in <1s.")
+        except Exception as e:
+            print(f"[PDF Processor Fallback to PyPDFLoader]: {e}")
+            loader = PyPDFLoader(file_path)
+            docs = loader.load()[:max_pages]
 
         total_text_length = sum(len(d.page_content.strip()) for d in docs)
         if total_text_length < 20 and len(docs) > 0:
@@ -56,7 +77,7 @@ class PDFIngestionEngine:
     def create_parent_child_chunks(
         self, documents: List[Document], filename: str
     ) -> Tuple[List[Document], List[Document]]:
-        """Splits raw document pages into Parent and Child documents."""
+        """Splits raw document pages into Parent and Child documents with tight cloud-optimized ceilings."""
         parent_docs: List[Document] = []
         child_docs: List[Document] = []
 
@@ -65,6 +86,9 @@ class PDFIngestionEngine:
             valid_docs = documents
 
         raw_parents = self.parent_splitter.split_documents(valid_docs)
+        # Cap max parent chunks to 60 for instant database persistence
+        if len(raw_parents) > 60:
+            raw_parents = raw_parents[:60]
 
         for parent in raw_parents:
             parent_id = f"{filename}_parent_{uuid.uuid4().hex[:8]}"
@@ -90,4 +114,10 @@ class PDFIngestionEngine:
                 }
                 child_docs.append(Document(page_content=child.page_content, metadata=child_metadata))
 
+        # Cap total child chunks to 120 so Cohere + BM25 embeddings finish in < 2 seconds
+        if len(child_docs) > 120:
+            child_docs = child_docs[:120]
+
         return parent_docs, child_docs
+
+

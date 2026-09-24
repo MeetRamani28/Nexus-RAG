@@ -69,6 +69,13 @@ def read_root():
     return {"status": "online", "system": "Nexus-RAG Enterprise Engine v2.0"}
 
 
+@app.get("/healthz")
+def healthz():
+    """Ultra-lightweight keep-alive endpoint for automated pings / health monitors."""
+    return {"status": "alive", "service": "Nexus-RAG"}
+
+
+
 @app.get("/api/v1/health")
 def health_check():
     """Connectivity check for all backend services."""
@@ -108,25 +115,32 @@ def health_check():
 def list_available_models():
     """Returns available text generation LLM models on Groq for user selection."""
     groq_api_key = os.getenv("GROQ_API_KEY", "")
-    from app.llm_manager import fetch_active_groq_models
+    from app.llm_manager import fetch_active_groq_models, PREFERRED_MODEL_PRIORITY
     active_ids = fetch_active_groq_models(groq_api_key)
     
     default_models = [
         {"id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B", "tag": "Fast & Smart"},
+        {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B", "tag": "Ultra Fast"},
         {"id": "qwen/qwen3.8-27b", "name": "Qwen 3.8 27B", "tag": "High Reasoning"},
         {"id": "mixtral-8x7b-32768", "name": "Mixtral 8x7B", "tag": "Long Context"},
-        {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B", "tag": "Ultra Fast"},
     ]
     
     if active_ids:
-        # Filter or format dynamically
+        def model_priority(m_id):
+            if m_id in PREFERRED_MODEL_PRIORITY:
+                return PREFERRED_MODEL_PRIORITY.index(m_id)
+            return 999
+        active_ids.sort(key=model_priority)
+
         result = []
         for m_id in active_ids:
             name = m_id.split("/")[-1].replace("-", " ").title()
-            result.append({"id": m_id, "name": name, "tag": "Groq Active"})
+            tag = "Ultra Fast" if "instant" in m_id or "8b" in m_id else "Fast & Smart" if "70b" in m_id else "Groq Active"
+            result.append({"id": m_id, "name": name, "tag": tag})
         return result
         
     return default_models
+
 
 
 @app.get("/api/v1/system/info")
@@ -496,12 +510,15 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                 yield {"event": "done", "data": "[DONE]"}
                 return
 
-            # 4. Full LangGraph RAG Workflow (For document-based queries)
+            # 4. Fast RAG Workflow with True Real-Time Token Streaming
             rag_start_time = time.time()
+            from app.graph.nodes import retrieve_node, rerank_node, web_search_node
+
             initial_state = {
                 "question": payload.question,
                 "model": payload.model,
                 "source_file": source_file,
+                "user_id": user_id,
                 "documents": [],
                 "child_documents": [],
                 "reranked_documents": [],
@@ -510,41 +527,121 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                 "citation_sources": [],
                 "error": None,
             }
-            
-            thread_id = payload.conversation_id or str(uuid.uuid4())
-            config = {"configurable": {"thread_id": thread_id}}
-            final_state = {}
-            for step in rag_graph.stream(initial_state, config=config):
-                for node_name, state_update in step.items():
-                    final_state.update(state_update)
-                    if node_name == "retrieve":
-                        yield {"event": "agent", "data": json.dumps({"agent_step": "Retrieval Agent is searching document vectors..."})}
-                    elif node_name == "rerank":
-                        yield {"event": "agent", "data": json.dumps({"agent_step": "Re-Ranking Agent is prioritizing most relevant context..."})}
-                    elif node_name == "web_search":
-                        if state_update.get("web_context"):
-                            yield {"event": "agent", "data": json.dumps({"agent_step": "Web Search Agent found live context from DuckDuckGo..."})}
-                        else:
-                            yield {"event": "agent", "data": json.dumps({"agent_step": "Web Search Agent bypassed (Document context sufficient)..."})}
-                    elif node_name == "generate":
-                        yield {"event": "agent", "data": json.dumps({"agent_step": "Synthesis Agent drafted final response..."})}
-                await asyncio.sleep(0.01)
 
-            citations = final_state.get("citation_sources", [])
-            generation_text = final_state.get("generation", "No response generated.")
-            total_duration_ms = int((time.time() - rag_start_time) * 1000)
+            # Step 1: Retrieval Agent
+            yield {"event": "agent", "data": json.dumps({"agent_step": "Retrieval Agent is searching document vectors..."})}
+            retrieve_update = retrieve_node(initial_state)
+            initial_state.update(retrieve_update)
 
+            # Step 2: Re-ranking Agent
+            yield {"event": "agent", "data": json.dumps({"agent_step": "Re-Ranking Agent is prioritizing most relevant context..."})}
+            rerank_update = rerank_node(initial_state)
+            initial_state.update(rerank_update)
+
+            citations = initial_state.get("citation_sources", [])
             yield {"event": "citations", "data": json.dumps({"citations": citations})}
-            yield {"event": "telemetry", "data": json.dumps({"ttft_ms": total_duration_ms, "model": payload.model or get_active_llm_model_name(), "cache_hit": False, "sources": len(citations)})}
-            for word in generation_text.split(" "):
-                yield {"event": "message", "data": json.dumps({"token": word + " "})}
-                await asyncio.sleep(0.003)
 
-            # 5. Save to Redis cache + DB
-            if generation_text and not generation_text.startswith("Error"):
-                semantic_cache.set_cached_response(payload.question, generation_text, citations)
+            # Step 3: Web Search Fallback (if document context missing)
+            reranked_docs = initial_state.get("reranked_documents", [])
+            if not reranked_docs:
+                web_update = web_search_node(initial_state)
+                initial_state.update(web_update)
+                if initial_state.get("web_context"):
+                    yield {"event": "agent", "data": json.dumps({"agent_step": "Web Search Agent found live context from DuckDuckGo..."})}
+
+            web_context = initial_state.get("web_context", "")
+
+            # Step 4: True Real-time Streaming Synthesis with Groq
+            if not reranked_docs and not web_context:
+                empty_msg = "No relevant context was found in the ingested documents to answer your query."
+                yield {"event": "telemetry", "data": json.dumps({"ttft_ms": 150, "model": payload.model or get_active_llm_model_name(), "cache_hit": False, "sources": 0})}
+                yield {"event": "message", "data": json.dumps({"token": empty_msg})}
+                if payload.conversation_id:
+                    crud.add_message(db, payload.conversation_id, user_id, "assistant", empty_msg, [])
+                yield {"event": "done", "data": "[DONE]"}
+                return
+
+            context_str = "\n\n---\n\n".join(
+                [f"[Source: {doc.metadata.get('source_file')}, Page: {doc.metadata.get('page', 1)}]\n{doc.page_content}" 
+                 for doc in reranked_docs]
+            )
+            if web_context:
+                context_str += f"\n\n--- WEB CONTEXT ---\n{web_context}"
+
+            if len(context_str) > 6000:
+                context_str = context_str[:6000] + "\n\n[Context truncated for token limit...]"
+
+            yield {"event": "agent", "data": json.dumps({"agent_step": "Synthesis Agent drafted final response..."})}
+
+            from langchain_core.prompts import ChatPromptTemplate
+            from langchain_groq import ChatGroq
+            from app.llm_manager import fetch_active_groq_models
+
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", "You are Nexus-RAG, an Enterprise-grade Document Intelligence Assistant.\n"
+                           "Answer the user's query factually, concisely, and directly based on the provided Context.\n"
+                           "Structure your answer cleanly using rich Markdown: bullet points, bold key terms or metrics, and short informative paragraphs.\n"
+                           "If the context does not contain enough information, state that clearly and succinctly without hallucinating.\n\n"
+                           "Context:\n{context}"),
+                ("human", "{question}")
+            ])
+
+            groq_api_key = os.getenv("GROQ_API_KEY", "")
+            active_model = payload.model or get_active_llm_model_name()
+            generation_chunks = []
+            first_token_time = None
+
+            try:
+                llm = ChatGroq(
+                    temperature=0.1,
+                    model_name=active_model,
+                    groq_api_key=groq_api_key,
+                    max_tokens=1024,
+                    streaming=True,
+                )
+                chain = prompt | llm
+                async for chunk in chain.astream({"context": context_str, "question": payload.question}):
+                    token = chunk.content if hasattr(chunk, "content") else str(chunk)
+                    if token:
+                        if first_token_time is None:
+                            first_token_time = time.time()
+                            ttft_ms = int((first_token_time - rag_start_time) * 1000)
+                            yield {"event": "telemetry", "data": json.dumps({"ttft_ms": ttft_ms, "model": active_model, "cache_hit": False, "sources": len(citations)})}
+                        generation_chunks.append(token)
+                        yield {"event": "message", "data": json.dumps({"token": token})}
+            except Exception as primary_err:
+                print(f"[RAG Stream Warning]: Model '{active_model}' failed ({primary_err}). Trying fallback...")
+                try:
+                    available = fetch_active_groq_models(groq_api_key)
+                    fallback_model = next((m for m in available if m != active_model), "llama-3.1-8b-instant")
+                    fallback_llm = ChatGroq(
+                        temperature=0.1,
+                        model_name=fallback_model,
+                        groq_api_key=groq_api_key,
+                        max_tokens=1024,
+                        streaming=True,
+                    )
+                    fallback_chain = prompt | fallback_llm
+                    async for chunk in fallback_chain.astream({"context": context_str, "question": payload.question}):
+                        token = chunk.content if hasattr(chunk, "content") else str(chunk)
+                        if token:
+                            if first_token_time is None:
+                                first_token_time = time.time()
+                                ttft_ms = int((first_token_time - rag_start_time) * 1000)
+                                yield {"event": "telemetry", "data": json.dumps({"ttft_ms": ttft_ms, "model": fallback_model, "cache_hit": False, "sources": len(citations)})}
+                            generation_chunks.append(token)
+                            yield {"event": "message", "data": json.dumps({"token": token})}
+                except Exception as fb_err:
+                    err_msg = f"Error generating response: {str(primary_err)}"
+                    generation_chunks.append(err_msg)
+                    yield {"event": "message", "data": json.dumps({"token": err_msg})}
+
+            full_generation = "".join(generation_chunks)
+            if full_generation and not full_generation.startswith("Error"):
+                semantic_cache.set_cached_response(payload.question, full_generation, citations)
             if payload.conversation_id:
-                crud.add_message(db, payload.conversation_id, user_id, "assistant", generation_text, citations)
+                crud.add_message(db, payload.conversation_id, user_id, "assistant", full_generation, citations)
+
 
         except Exception as e:
             yield {"event": "message", "data": json.dumps({"token": f"\n\n[System Error]: {str(e)}"})}

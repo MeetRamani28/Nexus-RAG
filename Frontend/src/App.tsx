@@ -64,7 +64,7 @@ const MainApp: React.FC = () => {
   const { user } = useUser();
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [isBackendWakingUp, setIsBackendWakingUp] = useState(true);
+  const [isBackendWakingUp, setIsBackendWakingUp] = useState(false);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -280,17 +280,8 @@ const MainApp: React.FC = () => {
     if (window.innerWidth < 768) setSidebarOpen(false);
   };
 
-  if (isBackendWakingUp) {
-    return (
-      <UniversalSplashScreen
-        title="Waking up Intelligence Engine..."
-        subtitle="Since this project is hosted on Render free tier, please wait while container spins up."
-        onSkip={() => setIsBackendWakingUp(false)}
-      />
-    );
-  }
-
   return (
+
     <div className="fixed inset-0 flex flex-col bg-[#000000] text-[#F5F5F7] font-sans overflow-hidden" style={{ touchAction: 'pan-y' }}>
       {/* ── Ambient Glowing Nodes (Clipped within viewport so it never forces scroll) ── */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">

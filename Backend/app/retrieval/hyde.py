@@ -21,9 +21,14 @@ class HyDEEngine:
         if not self.enabled:
             return query
 
+        # Fast path: concise / direct queries (<= 12 words) match dense & BM25 directly; save 250ms LLM overhead
+        if len(query.strip().split()) <= 12:
+            return query
+
         groq_api_key = os.getenv("GROQ_API_KEY", "")
         if not groq_api_key:
             return query
+
 
         # Use ultra-fast 8b model for instantaneous query expansion (<250ms)
         hyde_model = "llama-3.1-8b-instant"

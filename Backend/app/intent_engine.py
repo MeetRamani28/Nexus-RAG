@@ -33,6 +33,19 @@ GRATITUDE_RESPONSE = """You're very welcome! 😊 Feel free to ask if you have m
 FAREWELL_RESPONSE = """Goodbye! Have a productive day ahead. Whenever you have documents to analyze, Nexus-RAG is right here for you. 👋"""
 
 
+COMBINED_RESPONSE = """Hello! 👋 I am doing great and running at peak performance! 🚀
+
+I am **Nexus-RAG**, an Enterprise Document Intelligence & Research Assistant.
+
+### 🌟 What I can do for you:
+- 📄 **Deep Document Intelligence**: Upload single or multiple PDF documents (contracts, financial reports, research papers, study notes) and ask complex questions.
+- 🎯 **Source-Grounded Answers**: Every insight is retrieved from your uploaded files and backed by verifiable source citations with page numbers.
+- ⚡ **Instant Semantic Caching**: Frequently asked questions are served in milliseconds via Redis-powered semantic caching.
+- 💡 **General AI Analysis**: Ask general knowledge questions, request summaries, analyze data, or draft content directly.
+
+Feel free to attach a document or ask me any question to get started!"""
+
+
 def get_instant_conversational_response(question: str) -> Optional[str]:
     """
     Evaluates whether a user query is a greeting, small-talk, or capability inquiry.
@@ -46,6 +59,13 @@ def get_instant_conversational_response(question: str) -> Optional[str]:
     # Normalize punctuation and extra spaces
     q_clean = re.sub(r"[^\w\s]", " ", q)
     q_clean = re.sub(r"\s+", " ", q_clean).strip()
+
+    # Multi-intent check: "hello how are you what you do" / "how are you and what can you do"
+    has_wellbeing = bool(re.search(r"\b(how\s+are\s+you|how\s+r\s+u|how\s+you\s+doing|hows\s+it\s+going|how\s+is\s+it\s+going)\b", q_clean))
+    has_capabilities = bool(re.search(r"\b(what\s+you\s+do|what\s+do\s+you\s+do|what\s+can\s+you\s+do|what\s+are\s+you\s+able\s+to\s+do|who\s+are\s+you|what\s+is\s+nexus\s*rag|tell\s+me\s+about\s+yourself)\b", q_clean))
+    
+    if has_wellbeing and has_capabilities:
+        return COMBINED_RESPONSE
 
     # 1. Capabilities / "what you do" / "who are you" / "what can you do"
     capabilities_patterns = [
