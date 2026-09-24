@@ -193,18 +193,15 @@ const MainApp: React.FC = () => {
     }
   }, [fetchConversations, isBackendWakingUp]);
 
-  // Handle screen resize to show/hide sidebar automatically on desktop
+  // Handle desktop vs mobile layout via matchMedia (never closes on mobile keyboard open)
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setSidebarOpen(true);
-      } else {
-        setSidebarOpen(false);
-      }
+    const mql = window.matchMedia('(min-width: 768px)');
+    const handleMediaChange = (e: MediaQueryListEvent) => {
+      setSidebarOpen(e.matches);
     };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    setSidebarOpen(mql.matches);
+    mql.addEventListener('change', handleMediaChange);
+    return () => mql.removeEventListener('change', handleMediaChange);
   }, []);
 
   // Create New Chat (Purely local draft until user sends first message or attaches doc)

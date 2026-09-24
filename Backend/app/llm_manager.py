@@ -6,11 +6,10 @@ _active_model_cache: Optional[str] = None
 
 # Priority ranking for text generation models on Groq
 PREFERRED_MODEL_PRIORITY: List[str] = [
-    "qwen/qwen3.8-27b",
-    "openai/gpt-oss-120b",
-    "openai/gpt-oss-20b",
     "llama-3.3-70b-versatile",
-    "llama3-70b-8192"
+    "llama-3.1-8b-instant",
+    "qwen/qwen3.8-27b",
+    "mixtral-8x7b-32768",
 ]
 
 # Keywords to exclude non-chat/audio/guardrail models

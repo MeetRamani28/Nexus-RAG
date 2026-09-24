@@ -161,18 +161,20 @@ export const Sidebar: React.FC<Props> = ({
                           <p className={`text-[10px] mt-0.5 ${activeId === conv.id ? 'text-[#9E9EA8]' : 'text-[#9E9EA8]/70'}`}>{conv.message_count} {conv.message_count === 1 ? "query" : "queries"}</p>
                         )}
                       </div>
-                      <div className="hidden group-hover:flex items-center gap-1 shrink-0 ml-2">
+                      <div className="flex md:hidden md:group-hover:flex items-center gap-1.5 shrink-0 ml-2">
                         <button
                           onClick={e => startEdit(conv, e)}
-                          className="p-1 text-[#9E9EA8] hover:text-[#E1DCC9] rounded-md hover:bg-[#000000]/60 transition-all cursor-pointer"
+                          className="p-1.5 text-[#9E9EA8] hover:text-[#E1DCC9] rounded-md hover:bg-[#000000]/60 transition-all cursor-pointer"
+                          title="Rename chat"
                         >
-                          <Edit2 className="w-3 h-3" />
+                          <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={e => { e.stopPropagation(); onDelete(conv.id); }}
-                          className="p-1 text-[#9E9EA8] hover:text-rose-400 rounded-md hover:bg-rose-950/40 transition-all cursor-pointer"
+                          className="p-1.5 text-[#9E9EA8] hover:text-rose-400 rounded-md hover:bg-rose-950/40 transition-all cursor-pointer"
+                          title="Delete chat"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </>

@@ -463,7 +463,7 @@ export const ChatInterface: React.FC<Props> = ({
       { id: aid, role: "assistant", content: "", citations: [], isStreaming: true },
     ]);
     setIsStreaming(true);
-    setPipeline("retrieving");
+    setPipeline("idle");
 
     try {
       const res = await fetchAuth(`${API_BASE_URL}/api/v1/query/stream`, {

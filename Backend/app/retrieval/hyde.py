@@ -25,20 +25,21 @@ class HyDEEngine:
         if not groq_api_key:
             return query
 
-        active_model = get_active_llm_model_name()
+        # Use ultra-fast 8b model for instantaneous query expansion (<250ms)
+        hyde_model = "llama-3.1-8b-instant"
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a specialized RAG Query Expansion Assistant.\n"
-                       "Write a concise, plausible 2-3 sentence hypothetical passage that answers the user's question.\n"
-                       "Do not write any introductory text, markdown headers, or explanations. Output ONLY the hypothetical document text."),
+            ("system", "Write a concise 2-sentence hypothetical document snippet that answers this question. Output ONLY the factual text."),
             ("human", "{question}")
         ])
 
         try:
             llm = ChatGroq(
-                temperature=0.3,
-                model_name=active_model,
-                groq_api_key=groq_api_key
+                temperature=0.2,
+                model_name=hyde_model,
+                groq_api_key=groq_api_key,
+                max_tokens=60,
+                timeout=2.0,
             )
             chain = prompt | llm
             response = chain.invoke({"question": query})

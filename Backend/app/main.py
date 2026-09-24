@@ -423,8 +423,6 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
 
             # 3. Check Fast-Path (Sub-200ms direct true streaming for chit-chat / general queries)
             if is_fast_path_query(payload.question, source_file):
-                yield {"event": "agent", "data": json.dumps({"agent_step": "Synthesis Agent streaming directly..."})}
-                
                 groq_api_key = os.getenv("GROQ_API_KEY", "")
                 active_model = payload.model or get_active_llm_model_name()
                 
@@ -499,6 +497,7 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                 return
 
             # 4. Full LangGraph RAG Workflow (For document-based queries)
+            rag_start_time = time.time()
             initial_state = {
                 "question": payload.question,
                 "model": payload.model,
@@ -528,16 +527,18 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                         else:
                             yield {"event": "agent", "data": json.dumps({"agent_step": "Web Search Agent bypassed (Document context sufficient)..."})}
                     elif node_name == "generate":
-                        yield {"event": "agent", "data": json.dumps({"agent_step": "Synthesis Agent is drafting final response..."})}
-                await asyncio.sleep(0.02)
+                        yield {"event": "agent", "data": json.dumps({"agent_step": "Synthesis Agent drafted final response..."})}
+                await asyncio.sleep(0.01)
 
             citations = final_state.get("citation_sources", [])
             generation_text = final_state.get("generation", "No response generated.")
+            total_duration_ms = int((time.time() - rag_start_time) * 1000)
 
             yield {"event": "citations", "data": json.dumps({"citations": citations})}
+            yield {"event": "telemetry", "data": json.dumps({"ttft_ms": total_duration_ms, "model": payload.model or get_active_llm_model_name(), "cache_hit": False, "sources": len(citations)})}
             for word in generation_text.split(" "):
                 yield {"event": "message", "data": json.dumps({"token": word + " "})}
-                await asyncio.sleep(0.005)
+                await asyncio.sleep(0.003)
 
             # 5. Save to Redis cache + DB
             if generation_text and not generation_text.startswith("Error"):

@@ -120,10 +120,10 @@ def generate_node(state: RAGState) -> Dict[str, Any]:
         context_str = context_str[:MAX_CONTEXT_CHARS] + "\n\n[Context truncated for token limit...]"
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are an expert Enterprise Financial Document Assistant (Nexus-RAG).\n"
-                   "Answer the user's query accurately using the information provided in the Context below.\n"
-                   "If the Context includes Web Search results, incorporate them to provide a complete answer.\n"
-                   "CRITICAL INSTRUCTION: ALWAYS use rich Markdown formatting in your response. Use bullet points for lists, bold text for key metrics or entities, and headers (###) if the answer is long. Make it highly readable and visually appealing.\n\n"
+        ("system", "You are Nexus-RAG, an Enterprise-grade Document Intelligence Assistant.\n"
+                   "Answer the user's query factually, concisely, and directly based on the provided Context.\n"
+                   "Structure your answer cleanly using rich Markdown: bullet points, bold key terms or metrics, and short informative paragraphs.\n"
+                   "If the context does not contain enough information, state that clearly and succinctly without hallucinating.\n\n"
                    "Context:\n{context}"),
         ("human", "{question}")
     ])
