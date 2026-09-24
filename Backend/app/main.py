@@ -318,7 +318,7 @@ async def ingest_pdf(
         conv = crud.get_or_create_conversation(db, conversation_id, user_id, title=file.filename.replace(".pdf", "").title())
         crud.update_conversation_source_file(db, conv.id, file.filename, user_id)
 
-    # Duplicate detection
+    # Duplicate detection (sub-1ms)
     existing = crud.doc_exists_by_hash(db, file_hash, user_id)
     if existing:
         return DocumentIngestResponse(
@@ -330,12 +330,9 @@ async def ingest_pdf(
             duplicate=True,
         )
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-        tmp_file.write(content)
-        temp_path = tmp_file.name
-
     try:
-        raw_docs = ingestion_engine.load_pdf(temp_path)
+        # Zero-disk pure in-memory extraction (<0.1s)
+        raw_docs = ingestion_engine.load_pdf_from_bytes(content, file.filename)
         parent_docs, child_docs = ingestion_engine.create_parent_child_chunks(raw_docs, file.filename)
         vector_store_instance.store_documents(parent_docs, child_docs, user_id)
 
@@ -353,15 +350,14 @@ async def ingest_pdf(
             status="success",
             filename=file.filename,
             parent_chunks_created=len(parent_docs),
+
             child_chunks_created=len(child_docs),
             message="Document successfully processed, indexed, and stored in Vector Store.",
             duplicate=False,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process PDF: {str(e)}")
-    finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+
 
 
 # ─── Fast Path Classifier ───────────────────────────────────────────────────

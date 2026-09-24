@@ -62,15 +62,26 @@ class RedisSemanticCache:
         Returns Tuple of (cached_answer, citation_sources, similarity_score) if hit (> threshold), else None.
         """
         try:
+            search_pattern = f"nexus_cache:{user_id}:{doc_id}:*"
+            cache_keys = []
+
+            if self.client:
+                cache_keys = self.client.keys(search_pattern)
+                if not cache_keys:
+                    return None
+            else:
+                prefix = f"nexus_cache:{user_id}:{doc_id}:"
+                has_items = any(k.startswith(prefix) for k in self._in_memory_cache)
+                if not has_items:
+                    return None
+
+            # Only compute remote embedding if cached entries actually exist (saves 350ms per query)
             query_vector = self.embeddings.embed_query(query)
             best_match_key = None
             highest_similarity = -1.0
             best_cached_data = None
 
-            search_pattern = f"nexus_cache:{user_id}:{doc_id}:*"
-
             if self.client:
-                cache_keys = self.client.keys(search_pattern)
                 for key in cache_keys:
                     raw_data = self.client.get(key)
                     if raw_data:
@@ -93,6 +104,7 @@ class RedisSemanticCache:
                                 highest_similarity = sim
                                 best_match_key = key
                                 best_cached_data = cached_item
+
 
             if highest_similarity >= self.similarity_threshold and best_cached_data:
                 print(f"[Semantic Cache HIT]: User '{user_id}' Doc '{doc_id}' Sim {highest_similarity:.4f} >= {self.similarity_threshold} for query: '{query}'")

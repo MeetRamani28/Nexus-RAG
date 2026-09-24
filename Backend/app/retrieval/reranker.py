@@ -32,12 +32,15 @@ class RerankEngine:
         if not self.reranker:
             return documents[:self.top_n]
 
+        import concurrent.futures
+
+        def _do_rerank():
+            return list(self.reranker.compress_documents(documents=documents, query=query))
+
         try:
-            compressed_docs = self.reranker.compress_documents(
-                documents=documents,
-                query=query
-            )
-            return list(compressed_docs)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                fut = executor.submit(_do_rerank)
+                return fut.result(timeout=1.0)
         except Exception as e:
-            print(f"[Reranker Warning]: Reranking failed ({str(e)}). Falling back to vector order.")
-            return documents[:self.top_n]
+            print(f"[Reranker Fast-Fallback]: Reranking timed out or failed ({e}). Using vector order instantly.")
+            return documents[:self.top_n]

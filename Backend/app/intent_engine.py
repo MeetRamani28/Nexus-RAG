@@ -32,6 +32,10 @@ GRATITUDE_RESPONSE = """You're very welcome! 😊 Feel free to ask if you have m
 
 FAREWELL_RESPONSE = """Goodbye! Have a productive day ahead. Whenever you have documents to analyze, Nexus-RAG is right here for you. 👋"""
 
+CREATOR_RESPONSE = """I was built and engineered by **Meet Ramani** as an Enterprise AI Document Intelligence & Hybrid RAG platform. 🚀
+
+Nexus-RAG features parent-child vector chunking, dense + BM25 sparse hybrid retrieval, Cohere cross-encoder reranking, and semantic Redis caching."""
+
 
 COMBINED_RESPONSE = """Hello! 👋 I am doing great and running at peak performance! 🚀
 
@@ -110,5 +114,13 @@ def get_instant_conversational_response(question: str) -> Optional[str]:
     for pat in farewell_patterns:
         if re.search(pat, q_clean):
             return FAREWELL_RESPONSE
+
+    # 6. Creator / Developer
+    creator_patterns = [
+        r"\b(who\s+(created|made|built|developed|designed)\s+you|who\s+is\s+your\s+(creator|developer|maker|author|owner)|who\s+are\s+your\s+creators)\b"
+    ]
+    for pat in creator_patterns:
+        if re.search(pat, q_clean):
+            return CREATOR_RESPONSE
 
     return None

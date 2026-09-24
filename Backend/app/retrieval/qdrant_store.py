@@ -109,7 +109,11 @@ class QdrantVectorStore(VectorStoreInterface):
             return self.embeddings.embed_documents(texts)
 
         def task_embed_sparse():
-            return list(self.sparse_embeddings.embed(texts))
+            try:
+                return list(self.sparse_embeddings.embed(texts))
+            except Exception as e:
+                print(f"[Sparse Embedding Fallback]: {e}")
+                return None
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             fut_parents = executor.submit(task_save_parents)
@@ -120,9 +124,10 @@ class QdrantVectorStore(VectorStoreInterface):
             dense_vectors = fut_dense.result()
             sparse_vectors = fut_sparse.result()
 
+        has_sparse = sparse_vectors is not None and len(sparse_vectors) == len(dense_vectors)
 
         points = []
-        for c_doc, d_vec, s_vec in zip(child_docs, dense_vectors, sparse_vectors):
+        for idx, (c_doc, d_vec) in enumerate(zip(child_docs, dense_vectors)):
             point_id = str(uuid.uuid4())
             payload = {
                 "page_content": c_doc.page_content,
@@ -130,19 +135,22 @@ class QdrantVectorStore(VectorStoreInterface):
                 "doc_id": c_doc.metadata.get("source_file"),
                 **c_doc.metadata
             }
+            vectors_payload: Dict[str, Any] = {"dense": d_vec}
+            if has_sparse and sparse_vectors[idx] is not None:
+                s_vec = sparse_vectors[idx]
+                vectors_payload["sparse"] = models.SparseVector(
+                    indices=s_vec.indices.tolist(),
+                    values=s_vec.values.tolist()
+                )
+
             points.append(
                 models.PointStruct(
                     id=point_id,
-                    vector={
-                        "dense": d_vec,
-                        "sparse": models.SparseVector(
-                            indices=s_vec.indices.tolist(),
-                            values=s_vec.values.tolist()
-                        )
-                    },
+                    vector=vectors_payload,
                     payload=payload
                 )
             )
+
 
         batch_size = 100
         for i in range(0, len(points), batch_size):

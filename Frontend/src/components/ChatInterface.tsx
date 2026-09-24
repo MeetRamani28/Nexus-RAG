@@ -186,10 +186,12 @@ export const ChatInterface: React.FC<Props> = ({
         if (data && data.length > 0) {
           setAvailableModels(data);
           const ids = data.map((m) => m.id);
-          setSelectedModel((prev) => (ids.includes(prev) ? prev : data[0].id));
+          const bestModel = data.find((m) => m.id.includes("70b") || m.id.includes("instant")) || data[0];
+          setSelectedModel((prev) => (prev && prev !== "mixtral-8x7b-32768" && ids.includes(prev) ? prev : bestModel.id));
         }
       })
       .catch(() => {});
+
   }, [fetchAuth]);
 
   // Close model & attach dropdowns on outside click
@@ -449,9 +451,10 @@ export const ChatInterface: React.FC<Props> = ({
 
   // Send Message (Fast path or RAG - works seamlessly with or without document)
   const sendMessage = async (questionText: string) => {
-    if (!conversationId || isStreaming) return;
+    if (!conversationId || isStreaming || uploadingPdf) return;
     const q = questionText.trim();
     if (!q) return;
+
     setInput("");
 
     const uid = `u-${Date.now()}`;
@@ -667,16 +670,17 @@ export const ChatInterface: React.FC<Props> = ({
             ) : (
               /* Central Drag & Drop PDF Upload Box */
               <div className="w-full max-w-xl mb-6 space-y-4">
-                <label
+                <div
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
+                    if (uploadingPdf) return;
                     const files = Array.from(e.dataTransfer.files).filter(
                       (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
                     );
                     if (files.length > 0) handlePdfUpload(files);
                   }}
-                  className="flex flex-col items-center justify-center border-2 border-dashed border-[#44444E]/60 hover:border-[#E1DCC9]/80 rounded-3xl p-8 cursor-pointer transition-all duration-300 bg-[#1E1E24]/60 backdrop-blur-xl hover:bg-[#1E1E24]/80 group shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+                  className="flex flex-col items-center justify-center border-2 border-dashed border-[#44444E]/60 hover:border-[#E1DCC9]/80 rounded-3xl p-8 transition-all duration-300 bg-[#1E1E24]/60 backdrop-blur-xl hover:bg-[#1E1E24]/80 group shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
                 >
                   <div className="w-12 h-12 rounded-2xl bg-[#000000]/70 border border-[#44444E]/60 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-inner">
                     <FileText className="w-6 h-6 text-[#E1DCC9]" />
@@ -691,7 +695,11 @@ export const ChatInterface: React.FC<Props> = ({
                   <p className="text-[11px] text-[#9E9EA8]">Upload PDF documents to start analyzing</p>
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
                     disabled={uploadingPdf}
                     className="mt-4 px-4 py-2 bg-[#E1DCC9] hover:bg-[#EDE8D6] disabled:bg-[#44444E]/40 disabled:text-[#9E9EA8]/40 text-[#1E1E24] rounded-xl text-xs font-extrabold shadow-[0_4px_16px_rgba(225,220,201,0.25)] transition-all flex items-center gap-1.5 cursor-pointer"
                   >
@@ -701,7 +709,7 @@ export const ChatInterface: React.FC<Props> = ({
                       <><Plus className="w-3.5 h-3.5 text-[#1E1E24]" /><span>Select PDF Document(s)</span></>
                     )}
                   </button>
-                </label>
+                </div>
 
                 {/* Existing Ingested Docs Selector */}
                 {existingDocs.length > 0 && (
@@ -714,8 +722,9 @@ export const ChatInterface: React.FC<Props> = ({
                         <button
                           key={doc.filename}
                           type="button"
+                          disabled={uploadingPdf}
                           onClick={() => handleAttachExistingDoc(doc.filename)}
-                          className="px-3 py-1.5 bg-[#000000]/60 backdrop-blur-md hover:bg-[#000000]/80 border border-[#44444E]/60 hover:border-[#E1DCC9]/70 rounded-xl text-xs text-[#E1DCC9] font-medium transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                          className="px-3 py-1.5 bg-[#000000]/60 backdrop-blur-md hover:bg-[#000000]/80 disabled:opacity-40 disabled:cursor-not-allowed border border-[#44444E]/60 hover:border-[#E1DCC9]/70 rounded-xl text-xs text-[#E1DCC9] font-medium transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                         >
                           <FileText className="w-3.5 h-3.5 text-[#E1DCC9]" />
                           <span className="truncate max-w-[180px]">{doc.filename}</span>
@@ -732,8 +741,16 @@ export const ChatInterface: React.FC<Props> = ({
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
-                  onClick={() => sendMessage(s)}
-                  className="p-3.5 bg-[#1E1E24]/50 backdrop-blur-md hover:bg-[#1E1E24]/80 border border-[#44444E]/50 hover:border-[#E1DCC9]/50 rounded-2xl text-left text-xs text-[#F5F5F7] transition-all duration-200 group flex items-start justify-between shadow-[0_4px_16px_rgba(0,0,0,0.25)] cursor-pointer"
+                  disabled={uploadingPdf || isStreaming}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (uploadingPdf || isStreaming) return;
+                    sendMessage(s);
+                  }}
+                  className={`p-3.5 bg-[#1E1E24]/50 backdrop-blur-md hover:bg-[#1E1E24]/80 border border-[#44444E]/50 hover:border-[#E1DCC9]/50 rounded-2xl text-left text-xs text-[#F5F5F7] transition-all duration-200 group flex items-start justify-between shadow-[0_4px_16px_rgba(0,0,0,0.25)] ${
+                    uploadingPdf || isStreaming ? 'opacity-30 cursor-not-allowed pointer-events-none' : 'cursor-pointer'
+                  }`}
                 >
                   <span className="line-clamp-2 leading-relaxed font-medium">{s}</span>
                   <Sparkles className="w-3.5 h-3.5 text-[#9E9EA8] group-hover:text-[#E1DCC9] shrink-0 ml-2 mt-0.5 transition-colors" />
@@ -741,6 +758,7 @@ export const ChatInterface: React.FC<Props> = ({
               ))}
             </div>
           </div>
+
         ) : (
           <div className="px-2 sm:px-4 pt-6 pb-6 space-y-6 max-w-3xl mx-auto w-full min-w-0">
             <div className="flex items-center gap-2 mb-4">
@@ -925,9 +943,14 @@ export const ChatInterface: React.FC<Props> = ({
                     ? `Uploading PDF ${uploadProgress.current} of ${uploadProgress.total}: ${uploadProgress.name}`
                     : attachedFile?.name || activeSourceFile || "PDF Document Attached"}
                 </span>
-                <span className="text-[10px] text-emerald-400 bg-[#000000]/60 px-2 py-0.5 rounded border border-emerald-500/30 font-medium shrink-0 hidden sm:inline">
-                  RAG Active
+                <span className={`text-[10px] px-2 py-0.5 rounded font-medium shrink-0 hidden sm:inline border ${
+                  uploadingPdf 
+                    ? "text-amber-400 bg-amber-950/40 border-amber-500/30" 
+                    : "text-emerald-400 bg-[#000000]/60 border-emerald-500/30"
+                }`}>
+                  {uploadingPdf ? "Indexing..." : "RAG Active"}
                 </span>
+
                 {uploadMessage && (
                   <span className="text-[11px] text-[#9E9EA8] truncate hidden md:inline">
                     {uploadMessage}
