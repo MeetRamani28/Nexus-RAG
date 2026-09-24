@@ -101,13 +101,13 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
   return (
     <div className="flex flex-col gap-4">
       {/* Upload area */}
-      <div className="bg-[#151C2C] border border-[#232F48] rounded-2xl p-5 shadow-md">
+      <div className="bg-[#1E1E24]/70 backdrop-blur-xl border border-[#44444E]/60 rounded-3xl p-5 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2.5">
-            <div className="p-1.5 bg-[#0B0F19] rounded-lg border border-[#232F48] text-[#00F0FF]">
+            <div className="p-1.5 bg-[#000000]/60 rounded-xl border border-[#44444E]/60 text-[#E1DCC9]">
               <Upload className="w-4 h-4" />
             </div>
-            <h2 className="text-sm font-bold text-[#00F0FF]">Upload PDF</h2>
+            <h2 className="text-sm font-bold text-[#E1DCC9]">Upload PDF</h2>
           </div>
           {loading && (
             <button
@@ -122,17 +122,17 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
         <label
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
-          className="flex flex-col items-center justify-center border-2 border-dashed border-[#232F48] hover:border-[#00F0FF] rounded-xl p-5 cursor-pointer transition-colors bg-[#0B0F19]"
+          className="flex flex-col items-center justify-center border-2 border-dashed border-[#44444E]/60 hover:border-[#E1DCC9]/80 rounded-2xl p-5 cursor-pointer transition-colors bg-[#000000]/50 backdrop-blur-md"
         >
-          <FileText className="w-7 h-7 text-[#00F0FF] mb-2" />
-          <span className="text-sm font-semibold text-[#F1F5F9] text-center">
+          <FileText className="w-7 h-7 text-[#E1DCC9] mb-2" />
+          <span className="text-sm font-semibold text-[#F5F5F7] text-center">
             {uploadProgress
               ? `Uploading ${uploadProgress.current} of ${uploadProgress.total}: ${uploadProgress.name}`
               : files.length > 0
               ? `${files.length} PDF file(s) selected: ${files.map(f => f.name).join(", ")}`
               : "Click or drag single or multiple PDFs here"}
           </span>
-          <span className="text-xs text-[#94A3B8] mt-1">Multi-page financial & technical PDFs</span>
+          <span className="text-xs text-[#9E9EA8] mt-1">Multi-page financial & technical PDFs</span>
           <input type="file" accept=".pdf" multiple className="hidden" onChange={handleFileChange} />
         </label>
 
@@ -144,27 +144,27 @@ export const PdfUploader: React.FC<PdfUploaderProps> = ({ onIngestSuccess }) => 
         )}
 
         {lastResult && (
-          <div className={`mt-3 rounded-xl p-3 text-xs border space-y-1 ${lastResult.duplicate ? "bg-[#0B0F19] border-amber-500/40 text-amber-300" : "bg-[#0B0F19] border-emerald-500/40 text-emerald-300"}`}>
+          <div className={`mt-3 rounded-xl p-3 text-xs border space-y-1 ${lastResult.duplicate ? "bg-[#000000]/60 border-amber-500/40 text-amber-300" : "bg-[#000000]/60 border-emerald-500/40 text-emerald-300"}`}>
             <div className="flex items-center space-x-1.5 font-medium">
               <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
               <span>{lastResult.duplicate ? "Already Ingested" : `${lastResult.filename} Processed!`}</span>
             </div>
             {!lastResult.duplicate && (
-              <div className="text-[#94A3B8] pl-5">
-                Parents: <strong className="text-[#00F0FF]">{lastResult.parent_chunks_created}</strong> | Children: <strong className="text-[#00F0FF]">{lastResult.child_chunks_created}</strong>
+              <div className="text-[#9E9EA8] pl-5">
+                Parents: <strong className="text-[#E1DCC9]">{lastResult.parent_chunks_created}</strong> | Children: <strong className="text-[#E1DCC9]">{lastResult.child_chunks_created}</strong>
               </div>
             )}
-            {lastResult.duplicate && <p className="text-[#94A3B8] pl-5">{lastResult.message}</p>}
+            {lastResult.duplicate && <p className="text-[#9E9EA8] pl-5">{lastResult.message}</p>}
           </div>
         )}
 
         <button
           onClick={handleUpload}
           disabled={files.length === 0 || loading}
-          className="mt-3 w-full py-2.5 px-4 bg-[#00F0FF] hover:bg-[#66F6FF] disabled:bg-[#232F48] disabled:text-[#94A3B8]/40 text-[#0B0F19] rounded-xl font-extrabold text-sm transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed shadow-md"
+          className="mt-3 w-full py-2.5 px-4 bg-[#E1DCC9] hover:bg-[#EDE8D6] disabled:bg-[#44444E]/40 disabled:text-[#9E9EA8]/40 text-[#1E1E24] rounded-xl font-extrabold text-sm transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed shadow-[0_4px_16px_rgba(225,220,201,0.25)]"
         >
           {loading ? (
-            <><Loader2 className="w-4 h-4 animate-spin text-[#0B0F19]" /><span>Processing...</span></>
+            <><Loader2 className="w-4 h-4 animate-spin text-[#1E1E24]" /><span>Processing...</span></>
           ) : (
             <span>Upload Document(s)</span>
           )}

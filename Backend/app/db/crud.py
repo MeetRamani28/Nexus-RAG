@@ -18,7 +18,39 @@ def create_conversation(db: Session, user_id: str, title: str = "New Conversatio
     return conv
 
 
+def get_or_create_conversation(db: Session, conversation_id: str, user_id: str, title: str = "New Conversation") -> Conversation:
+    conv = get_conversation(db, conversation_id, user_id)
+    if not conv:
+        # Check by id alone in case user_id is slightly different
+        conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
+        from app.db.crud import create_or_update_user
+        create_or_update_user(db, user_id, f"{user_id}@example.com")
+        conv = Conversation(id=conversation_id, title=title[:150], user_id=user_id)
+        db.add(conv)
+        db.commit()
+        db.refresh(conv)
+    return conv
+
+
+def cleanup_empty_conversations(db: Session, user_id: str):
+    """Purges empty conversations that have no messages and no source file."""
+    try:
+        empty_convs = (
+            db.query(Conversation)
+            .filter(Conversation.user_id == user_id, Conversation.source_file.is_(None))
+            .all()
+        )
+        for c in empty_convs:
+            if len(c.messages) == 0:
+                db.delete(c)
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
 def list_conversations(db: Session, user_id: str) -> List[Conversation]:
+    cleanup_empty_conversations(db, user_id)
     return db.query(Conversation).filter(Conversation.user_id == user_id).order_by(Conversation.updated_at.desc()).all()
 
 
@@ -36,12 +68,15 @@ def update_conversation_title(db: Session, conversation_id: str, title: str, use
     return conv
 
 
-def update_conversation_source_file(db: Session, conversation_id: str, filename: str, user_id: str) -> Optional[Conversation]:
+def update_conversation_source_file(db: Session, conversation_id: str, filename: Optional[str], user_id: str) -> Optional[Conversation]:
     conv = get_conversation(db, conversation_id, user_id)
     if not conv:
+        # Fallback to id only
+        conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
         return None
-    conv.source_file = filename
-    if conv.title == "New Conversation":
+    conv.source_file = filename if filename else None
+    if filename and conv.title == "New Conversation":
         conv.title = filename.replace(".pdf", "").replace("_", " ").title()
     db.commit()
     db.refresh(conv)
@@ -51,7 +86,11 @@ def update_conversation_source_file(db: Session, conversation_id: str, filename:
 def delete_conversation(db: Session, conversation_id: str, user_id: str) -> bool:
     conv = get_conversation(db, conversation_id, user_id)
     if not conv:
+        conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
         return False
+    # Explicitly delete all child messages first
+    db.query(Message).filter(Message.conversation_id == conv.id).delete(synchronize_session=False)
     db.delete(conv)
     db.commit()
     return True
@@ -128,8 +167,16 @@ def list_ingested_docs(db: Session, user_id: str) -> List[IngestedDocument]:
 def delete_ingested_doc(db: Session, filename: str, user_id: str) -> bool:
     doc = db.query(IngestedDocument).filter(IngestedDocument.filename == filename, IngestedDocument.user_id == user_id).first()
     if not doc:
+        doc = db.query(IngestedDocument).filter(IngestedDocument.filename == filename).first()
+    if not doc:
         return False
     db.delete(doc)
+
+    # Detach this document from all conversations referencing it
+    conversations_with_doc = db.query(Conversation).filter(Conversation.source_file == filename).all()
+    for conv in conversations_with_doc:
+        conv.source_file = None
+
     db.commit()
     return True
 

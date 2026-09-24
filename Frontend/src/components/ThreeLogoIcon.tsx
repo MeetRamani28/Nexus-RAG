@@ -29,7 +29,7 @@ export const ThreeLogoIcon: React.FC<ThreeLogoIconProps> = ({ size = 160 }) => {
     // 4. Compact 3D TorusKnot / Crystal Geometry
     const knotGeo = new THREE.TorusKnotGeometry(0.7, 0.22, 100, 16);
     const knotMat = new THREE.MeshBasicMaterial({
-      color: 0x00f0ff, // Luminous Cyber Cyan
+      color: 0xe1dcc9, // Warm Cream Linen Accent
       wireframe: true,
       transparent: true,
       opacity: 0.85,
@@ -40,7 +40,7 @@ export const ThreeLogoIcon: React.FC<ThreeLogoIconProps> = ({ size = 160 }) => {
     // Inner glowing core
     const coreGeo = new THREE.IcosahedronGeometry(0.45, 1);
     const coreMat = new THREE.MeshBasicMaterial({
-      color: 0x94a3b8, // Cool Slate
+      color: 0x44444e, // Dark Charcoal Slate Gray
       wireframe: true,
       transparent: true,
       opacity: 0.9,
@@ -63,7 +63,7 @@ export const ThreeLogoIcon: React.FC<ThreeLogoIconProps> = ({ size = 160 }) => {
 
     const particleMat = new THREE.PointsMaterial({
       size: 0.04,
-      color: 0x00f0ff, // Cyan glow accent
+      color: 0xe1dcc9, // Cream Linen glow accent
       transparent: true,
       opacity: 0.9,
       blending: THREE.AdditiveBlending,

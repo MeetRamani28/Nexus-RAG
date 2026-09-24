@@ -75,10 +75,10 @@ export const ConversationList: React.FC<Props> = ({
 
   if (conversations.length === 0) {
     return (
-      <div className="text-center text-[#94A3B8] text-xs py-6 px-2">
+      <div className="text-center text-[#9E9EA8] text-xs py-6 px-2">
         No conversations yet.
         <br />
-        Click <span className="text-[#00F0FF] font-semibold">+ New Chat</span> to begin.
+        Click <span className="text-[#E1DCC9] font-semibold">+ New Chat</span> to begin.
       </div>
     );
   }
@@ -87,7 +87,7 @@ export const ConversationList: React.FC<Props> = ({
     <div className="space-y-4">
       {Object.entries(groups).map(([label, convs]) => (
         <div key={label}>
-          <p className="text-[10px] uppercase tracking-widest text-[#94A3B8] font-bold px-2 mb-1">
+          <p className="text-[10px] uppercase tracking-widest text-[#9E9EA8] font-bold px-2 mb-1">
             {label}
           </p>
           <div className="space-y-1">
@@ -97,11 +97,11 @@ export const ConversationList: React.FC<Props> = ({
                 onClick={() => onSelect(conv.id)}
                 className={`group relative flex items-center px-3 py-2.5 rounded-xl cursor-pointer transition-all ${
                   activeId === conv.id
-                    ? "bg-[#0B0F19] border border-[#232F48] text-[#00F0FF] font-semibold shadow-sm"
-                    : "hover:bg-[#0B0F19]/60 text-[#F1F5F9]/80 hover:text-[#F1F5F9] border border-transparent"
+                    ? "bg-[#000000]/60 backdrop-blur-md border border-[#E1DCC9]/60 text-[#E1DCC9] font-semibold shadow-[0_0_15px_rgba(225,220,201,0.12)]"
+                    : "hover:bg-[#1E1E24]/50 text-[#F5F5F7]/80 hover:text-[#F5F5F7] border border-transparent"
                 }`}
               >
-                <MessageSquare className="w-3.5 h-3.5 shrink-0 mr-2.5 text-[#00F0FF]" />
+                <MessageSquare className="w-3.5 h-3.5 shrink-0 mr-2.5 text-[#E1DCC9]" />
 
                 {editingId === conv.id ? (
                   <div className="flex-1 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -113,12 +113,12 @@ export const ConversationList: React.FC<Props> = ({
                         if (e.key === "Enter") confirmEdit(conv.id, e as unknown as React.MouseEvent);
                         if (e.key === "Escape") cancelEdit(e as unknown as React.MouseEvent);
                       }}
-                      className="flex-1 bg-[#0B0F19] text-[#F1F5F9] text-xs rounded-lg px-2 py-1 border border-[#00F0FF] focus:outline-none min-w-0"
+                      className="flex-1 bg-[#000000] text-[#F5F5F7] text-xs rounded-lg px-2 py-1 border border-[#E1DCC9] focus:outline-none min-w-0"
                     />
-                    <button onClick={(e) => confirmEdit(conv.id, e)} className="text-emerald-400 hover:text-emerald-300 p-0.5">
+                    <button onClick={(e) => confirmEdit(conv.id, e)} className="text-[#E1DCC9] hover:text-[#EDE8D6] p-0.5">
                       <Check className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={cancelEdit} className="text-[#94A3B8] hover:text-[#F1F5F9] p-0.5">
+                    <button onClick={cancelEdit} className="text-[#9E9EA8] hover:text-[#F5F5F7] p-0.5">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -128,14 +128,14 @@ export const ConversationList: React.FC<Props> = ({
                     <div className="hidden group-hover:flex items-center gap-1 ml-1 shrink-0">
                       <button
                         onClick={(e) => startEdit(conv, e)}
-                        className="p-0.5 text-[#94A3B8] hover:text-[#00F0FF] transition-colors"
+                        className="p-0.5 text-[#9E9EA8] hover:text-[#E1DCC9] transition-colors"
                         title="Rename"
                       >
                         <Edit2 className="w-3 h-3" />
                       </button>
                       <button
                         onClick={(e) => handleDelete(conv.id, e)}
-                        className="p-0.5 text-[#94A3B8] hover:text-rose-400 transition-colors"
+                        className="p-0.5 text-[#9E9EA8] hover:text-rose-400 transition-colors"
                         title="Delete"
                       >
                         <Trash2 className="w-3 h-3" />

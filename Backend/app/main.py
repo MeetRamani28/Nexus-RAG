@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import asyncio
 import tempfile
@@ -148,7 +149,9 @@ def get_system_info():
 
 @app.get("/api/v1/conversations", response_model=List[ConversationListItem])
 def list_conversations(response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
-    response.headers["Cache-Control"] = "private, max-age=15, stale-while-revalidate=60"
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     convs = crud.list_conversations(db, user_id)
     result = []
     for c in convs:
@@ -182,7 +185,9 @@ def create_conversation(payload: ConversationCreate, db: Session = Depends(get_d
 
 @app.get("/api/v1/conversations/{conversation_id}", response_model=ConversationDetail)
 def get_conversation(conversation_id: str, response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
-    response.headers["Cache-Control"] = "private, max-age=15, stale-while-revalidate=60"
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     conv = crud.get_conversation(db, conversation_id, user_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -226,9 +231,8 @@ def attach_document_to_conversation(
     conversation_id: str, filename: str, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)
 ):
     """Associates an existing ingested document with a conversation session."""
-    conv = crud.update_conversation_source_file(db, conversation_id, filename, user_id)
-    if not conv:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv = crud.get_or_create_conversation(db, conversation_id, user_id, title=filename.replace(".pdf", "").title())
+    conv = crud.update_conversation_source_file(db, conv.id, filename, user_id)
     return {
         "status": "attached",
         "conversation_id": conv.id,
@@ -237,23 +241,42 @@ def attach_document_to_conversation(
     }
 
 
-@app.delete("/api/v1/conversations/{conversation_id}")
-def delete_conversation(conversation_id: str, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
-    success = crud.delete_conversation(db, conversation_id, user_id)
-    if not success:
+@app.post("/api/v1/conversations/{conversation_id}/detach_document")
+def detach_document_from_conversation(
+    conversation_id: str, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)
+):
+    """Detaches any attached document from the conversation session."""
+    conv = crud.update_conversation_source_file(db, conversation_id, None, user_id)
+    if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
+    return {
+        "status": "detached",
+        "conversation_id": conv.id,
+        "source_file": None,
+        "title": conv.title,
+    }
+
+
+@app.delete("/api/v1/conversations/{conversation_id}")
+def delete_conversation(conversation_id: str, response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    crud.delete_conversation(db, conversation_id, user_id)
     return {"status": "deleted", "id": conversation_id}
 
 
 # ─── Documents ────────────────────────────────────────────────────────────────
 
 @app.get("/api/v1/documents", response_model=List[IngestedDocumentResponse])
-def list_documents(db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+def list_documents(response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     return crud.list_ingested_docs(db, user_id)
 
 
 @app.delete("/api/v1/documents/{filename:path}")
-def delete_document(filename: str, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+def delete_document(filename: str, response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
     success = crud.delete_ingested_doc(db, filename, user_id)
     if not success:
         raise HTTPException(status_code=404, detail="Document record not found")
@@ -278,7 +301,8 @@ async def ingest_pdf(
 
     # If conversation_id is provided, associate PDF with this conversation session
     if conversation_id:
-        crud.update_conversation_source_file(db, conversation_id, file.filename, user_id)
+        conv = crud.get_or_create_conversation(db, conversation_id, user_id, title=file.filename.replace(".pdf", "").title())
+        crud.update_conversation_source_file(db, conv.id, file.filename, user_id)
 
     # Duplicate detection
     existing = crud.doc_exists_by_hash(db, file_hash, user_id)
@@ -335,9 +359,9 @@ def is_fast_path_query(question: str, source_file: Optional[str] = None) -> bool
     """
     q = question.strip().lower()
     
-    # 1. Standard greetings & small talk
+    # 1. Standard greetings & small talk (matches hi, hiiiii, heyyy, hyyy, hello, etc.)
     greetings_patterns = [
-        r"^(hi|hello|hey|hola|greetings|good\s+morning|good\s+afternoon|good\s+evening|howdy|sup)[\s!\.\?]*$",
+        r"^(h+i+|h+e+y+|h+y+|h+e+l+o+|hola|namaste|greetings|good\s+morning|good\s+afternoon|good\s+evening|howdy|sup|yo+)[\s!\.\?]*$",
         r"^(how\s+are\s+you.*|who\s+are\s+you.*|what\s+can\s+you\s+do.*|what\s+is\s+your\s+name.*|who\s+created\s+you.*)$",
         r"^(thanks.*|thank\s+you.*|bye.*|goodbye.*|cool|awesome|great|ok|okay)[\s!\.]*$",
         r"^(help|what\s+is\s+nexus\s*rag|tell\s+me\s+about\s+yourself)$"
@@ -347,12 +371,8 @@ def is_fast_path_query(question: str, source_file: Optional[str] = None) -> bool
         if re.search(pat, q):
             return True
 
-    # Keywords indicating document intent
-    doc_keywords = ["pdf", "document", "file", "page", "contract", "report", "summary", "clause", "table", "analysis", "ingested", "context", "according to"]
-    has_doc_keyword = any(kw in q for kw in doc_keywords)
-    
-    # 2. If no source file attached and no explicit document keywords requested
-    if not source_file and not has_doc_keyword:
+    # 2. If no source file attached to this chat session, answer as general enterprise assistant
+    if not source_file:
         return True
 
     return False
@@ -369,27 +389,41 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
         try:
             source_file = None
             if payload.conversation_id:
-                conv = crud.get_conversation(db, payload.conversation_id, user_id)
-                if conv:
-                    source_file = conv.source_file
-                crud.add_message(db, payload.conversation_id, user_id, "user", payload.question)
+                conv = crud.get_or_create_conversation(db, payload.conversation_id, user_id, title=payload.question[:80])
+                source_file = conv.source_file
+                crud.add_message(db, conv.id, user_id, "user", payload.question)
+
+            # 1. Check Instant Conversational Intent Engine (Sub-5ms for greetings, "what you do", well-being, help)
+            from app.intent_engine import get_instant_conversational_response
+            instant_answer = get_instant_conversational_response(payload.question)
+            if instant_answer:
+                yield {"event": "citations", "data": json.dumps({"citations": []})}
+                yield {"event": "telemetry", "data": json.dumps({"ttft_ms": 4, "cache_hit": True, "score": 1.0, "provider": "Instant Intent Engine"})}
+                for word in instant_answer.split(" "):
+                    yield {"event": "message", "data": json.dumps({"token": word + " "})}
+                    await asyncio.sleep(0.005)
+                if payload.conversation_id:
+                    crud.add_message(db, payload.conversation_id, user_id, "assistant", instant_answer, [])
+                yield {"event": "done", "data": "[DONE]"}
+                return
 
             # 2. Check Redis Semantic Cache
             cached_result = semantic_cache.get_cached_response(payload.question)
             if cached_result:
                 cached_generation, cached_citations, score = cached_result
                 yield {"event": "citations", "data": json.dumps({"citations": cached_citations})}
+                yield {"event": "telemetry", "data": json.dumps({"ttft_ms": 1, "cache_hit": True, "score": round(score, 3)})}
                 for word in cached_generation.split(" "):
                     yield {"event": "message", "data": json.dumps({"token": word + " "})}
-                    await asyncio.sleep(0.01)
+                    await asyncio.sleep(0.004)
                 if payload.conversation_id:
                     crud.add_message(db, payload.conversation_id, user_id, "assistant", cached_generation, cached_citations)
                 yield {"event": "done", "data": "[DONE]"}
                 return
 
-            # 3. Check Fast-Path (Sub-300ms direct streaming for chit-chat / general queries)
+            # 3. Check Fast-Path (Sub-200ms direct true streaming for chit-chat / general queries)
             if is_fast_path_query(payload.question, source_file):
-                yield {"event": "agent", "data": json.dumps({"agent_step": "Synthesis Agent responding directly..."})}
+                yield {"event": "agent", "data": json.dumps({"agent_step": "Synthesis Agent streaming directly..."})}
                 
                 groq_api_key = os.getenv("GROQ_API_KEY", "")
                 active_model = payload.model or get_active_llm_model_name()
@@ -397,11 +431,18 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                 from langchain_groq import ChatGroq
                 from langchain_core.prompts import ChatPromptTemplate
                 from app.llm_manager import fetch_active_groq_models
+                import time
                 
                 prompt = ChatPromptTemplate.from_messages([
                     ("system", "You are Nexus-RAG, an intelligent Enterprise AI Assistant. Provide helpful, accurate, concise, and beautifully formatted responses using Markdown."),
                     ("human", "{question}")
                 ])
+                
+                yield {"event": "citations", "data": json.dumps({"citations": []})}
+                
+                generation_chunks = []
+                start_time = time.time()
+                first_token_time = None
                 
                 try:
                     llm = ChatGroq(
@@ -409,10 +450,18 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                         model_name=active_model,
                         groq_api_key=groq_api_key,
                         max_tokens=1024,
+                        streaming=True,
                     )
                     chain = prompt | llm
-                    res = await chain.ainvoke({"question": payload.question})
-                    generation_text = str(res.content)
+                    async for chunk in chain.astream({"question": payload.question}):
+                        token = chunk.content if hasattr(chunk, "content") else str(chunk)
+                        if token:
+                            if first_token_time is None:
+                                first_token_time = time.time()
+                                ttft_ms = int((first_token_time - start_time) * 1000)
+                                yield {"event": "telemetry", "data": json.dumps({"ttft_ms": ttft_ms, "model": active_model, "cache_hit": False})}
+                            generation_chunks.append(token)
+                            yield {"event": "message", "data": json.dumps({"token": token})}
                 except Exception as fast_path_err:
                     print(f"[Fast Path LLM Warning]: Model '{active_model}' failed ({fast_path_err}). Attempting fallback...")
                     try:
@@ -423,22 +472,28 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                             model_name=fallback_model,
                             groq_api_key=groq_api_key,
                             max_tokens=1024,
+                            streaming=True,
                         )
                         fallback_chain = prompt | fallback_llm
-                        res = await fallback_chain.ainvoke({"question": payload.question})
-                        generation_text = str(res.content)
+                        async for chunk in fallback_chain.astream({"question": payload.question}):
+                            token = chunk.content if hasattr(chunk, "content") else str(chunk)
+                            if token:
+                                if first_token_time is None:
+                                    first_token_time = time.time()
+                                    ttft_ms = int((first_token_time - start_time) * 1000)
+                                    yield {"event": "telemetry", "data": json.dumps({"ttft_ms": ttft_ms, "model": fallback_model, "cache_hit": False})}
+                                generation_chunks.append(token)
+                                yield {"event": "message", "data": json.dumps({"token": token})}
                     except Exception as fb_err:
-                        generation_text = f"Error generating response: {str(fast_path_err)}"
+                        err_token = f"Error generating response: {str(fast_path_err)}"
+                        generation_chunks.append(err_token)
+                        yield {"event": "message", "data": json.dumps({"token": err_token})}
 
-                yield {"event": "citations", "data": json.dumps({"citations": []})}
-                for word in generation_text.split(" "):
-                    yield {"event": "message", "data": json.dumps({"token": word + " "})}
-                    await asyncio.sleep(0.01)
-
-                if generation_text and not generation_text.startswith("Error"):
-                    semantic_cache.set_cached_response(payload.question, generation_text, [])
+                full_generation = "".join(generation_chunks)
+                if full_generation and not full_generation.startswith("Error"):
+                    semantic_cache.set_cached_response(payload.question, full_generation, [])
                 if payload.conversation_id:
-                    crud.add_message(db, payload.conversation_id, user_id, "assistant", generation_text, [])
+                    crud.add_message(db, payload.conversation_id, user_id, "assistant", full_generation, [])
                 
                 yield {"event": "done", "data": "[DONE]"}
                 return
@@ -474,7 +529,7 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                             yield {"event": "agent", "data": json.dumps({"agent_step": "Web Search Agent bypassed (Document context sufficient)..."})}
                     elif node_name == "generate":
                         yield {"event": "agent", "data": json.dumps({"agent_step": "Synthesis Agent is drafting final response..."})}
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.02)
 
             citations = final_state.get("citation_sources", [])
             generation_text = final_state.get("generation", "No response generated.")
@@ -482,7 +537,7 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
             yield {"event": "citations", "data": json.dumps({"citations": citations})}
             for word in generation_text.split(" "):
                 yield {"event": "message", "data": json.dumps({"token": word + " "})}
-                await asyncio.sleep(0.02)
+                await asyncio.sleep(0.005)
 
             # 5. Save to Redis cache + DB
             if generation_text and not generation_text.startswith("Error"):

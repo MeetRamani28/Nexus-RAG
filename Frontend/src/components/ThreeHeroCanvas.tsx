@@ -28,7 +28,7 @@ export const ThreeHeroCanvas: React.FC = () => {
     // 4. Subtle Background Octahedron (Low opacity, deep in scene)
     const bgGeo = new THREE.OctahedronGeometry(2.5, 2);
     const bgMat = new THREE.MeshBasicMaterial({
-      color: 0x00f0ff,
+      color: 0xe1dcc9,
       wireframe: true,
       transparent: true,
       opacity: 0.12, // Ultra subtle background grid
@@ -47,7 +47,7 @@ export const ThreeHeroCanvas: React.FC = () => {
 
     const particleMat = new THREE.PointsMaterial({
       size: 0.025,
-      color: 0x00f0ff,
+      color: 0xe1dcc9,
       transparent: true,
       opacity: 0.6,
       blending: THREE.AdditiveBlending,

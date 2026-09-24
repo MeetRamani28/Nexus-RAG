@@ -1,10 +1,13 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-html, body {
-  background-color: #0B0F19;
-  color: #F1F5F9;
-  height: 100vh;
+html, body, #root {
+  background-color: #000000;
+  color: #F5F1E6;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
   overflow-x: hidden;
   touch-action: pan-y;

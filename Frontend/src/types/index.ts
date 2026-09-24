@@ -11,6 +11,12 @@ export interface ChatMessage {
   citations?: Citation[];
   isStreaming?: boolean;
   agentSteps?: string[];
+  telemetry?: {
+    ttft_ms?: number;
+    cache_hit?: boolean;
+    score?: number;
+    model?: string;
+  };
 }
 
 export interface IngestResponse {

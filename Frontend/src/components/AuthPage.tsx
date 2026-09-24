@@ -139,15 +139,19 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
   };
 
   return (
-    <div className="fixed inset-0 h-screen max-h-screen w-full bg-[#0B0F19] text-[#F1F5F9] font-sans flex items-stretch overflow-hidden select-none">
+    <div className="fixed inset-0 h-screen max-h-screen w-full bg-[#000000] text-[#F5F5F7] font-sans flex items-stretch overflow-hidden select-none relative">
+      {/* Ambient Glowing Nodes for Glass Refraction */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#E1DCC9]/10 rounded-full blur-[140px] pointer-events-none z-0" />
+      <div className="absolute top-1/3 -right-32 w-96 h-96 bg-[#44444E]/30 rounded-full blur-[160px] pointer-events-none z-0" />
+      <div className="absolute -bottom-32 left-1/3 w-[500px] h-[500px] bg-[#E1DCC9]/8 rounded-full blur-[180px] pointer-events-none z-0" />
       
-      {/* ── LEFT PANEL: Sleek Cyber Slate Card Form ───────────── */}
-      <div className="w-full lg:w-1/2 h-full flex flex-col justify-between p-4 sm:p-6 lg:p-8 z-10 overflow-y-auto no-scrollbar bg-[#151C2C] border-r border-[#232F48] shadow-2xl">
+      {/* ── LEFT PANEL: Frosted Glass Form Card ───────────── */}
+      <div className="w-full lg:w-1/2 h-full flex flex-col justify-between p-4 sm:p-6 lg:p-8 z-10 overflow-y-auto no-scrollbar bg-[#1E1E24]/75 backdrop-blur-2xl border-r border-[#44444E]/40 shadow-2xl">
         
         {/* Top Header Logo with 3D Canvas Icon */}
         <div className="flex items-center gap-2.5 shrink-0">
           <Nexus3DLogo size={34} interactive={false} />
-          <span className="text-base font-extrabold text-[#00F0FF] tracking-tight">
+          <span className="text-base font-extrabold text-[#E1DCC9] tracking-tight">
             Nexus-RAG
           </span>
         </div>
@@ -166,12 +170,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
                 className="space-y-4"
               >
                 <div className="space-y-1">
-                  <div className="w-10 h-10 rounded-xl bg-[#0B0F19] border border-[#232F48] text-[#00F0FF] flex items-center justify-center mb-2">
-                    <KeyRound className="w-5 h-5 text-[#00F0FF]" />
+                  <div className="w-10 h-10 rounded-xl bg-[#000000] border border-[#44444E] text-[#E1DCC9] flex items-center justify-center mb-2">
+                    <KeyRound className="w-5 h-5 text-[#E1DCC9]" />
                   </div>
-                  <h2 className="text-xl font-bold tracking-tight text-[#F1F5F9]">Check Your Email</h2>
-                  <p className="text-xs text-[#94A3B8] leading-relaxed">
-                    We sent a 6-digit code to <span className="text-[#00F0FF] font-bold">{email}</span>.
+                  <h2 className="text-xl font-bold tracking-tight text-[#F5F5F7]">Check Your Email</h2>
+                  <p className="text-xs text-[#9E9EA8] leading-relaxed">
+                    We sent a 6-digit code to <span className="text-[#E1DCC9] font-bold">{email}</span>.
                   </p>
                 </div>
 
@@ -184,7 +188,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
 
                 <form onSubmit={handleOtpVerifySubmit} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-[#F1F5F9] mb-1">Verification Code</label>
+                    <label className="block text-xs font-bold text-[#F5F5F7] mb-1">Verification Code</label>
                     <input
                       type="text"
                       required
@@ -192,7 +196,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value)}
                       placeholder="123456"
-                      className="w-full bg-[#0B0F19] border border-[#232F48] focus:border-[#00F0FF] rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-[0.3em] text-[#F1F5F9] placeholder-[#94A3B8]/50 focus:outline-none focus:ring-1 focus:ring-[#00F0FF] transition-all shadow-inner"
+                      className="w-full bg-[#000000] border border-[#44444E] focus:border-[#E1DCC9] rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-[0.3em] text-[#F5F5F7] placeholder-[#9E9EA8]/50 focus:outline-none focus:ring-1 focus:ring-[#E1DCC9] transition-all shadow-inner"
                     />
                   </div>
 
@@ -201,10 +205,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
                     whileTap={{ scale: 0.98 }}
                     type="submit"
                     disabled={isSubmitting || otpCode.length < 6}
-                    className="w-full bg-[#00F0FF] hover:bg-[#66F6FF] disabled:bg-[#232F48] disabled:text-[#94A3B8]/50 text-[#0B0F19] font-extrabold py-2.5 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:cursor-not-allowed"
+                    className="w-full bg-[#E1DCC9] hover:bg-[#EDE8D6] disabled:bg-[#44444E] disabled:text-[#9E9EA8]/50 text-[#1E1E24] font-extrabold py-2.5 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-[#0B0F19]" />
+                      <Loader2 className="w-4 h-4 animate-spin text-[#1E1E24]" />
                     ) : (
                       <>
                         <span>Verify Email & Access</span>
@@ -216,7 +220,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
                   <button
                     type="button"
                     onClick={() => setPendingVerification(false)}
-                    className="w-full text-center text-xs text-[#00F0FF]/80 hover:text-[#00F0FF] transition-colors pt-1 cursor-pointer font-medium"
+                    className="w-full text-center text-xs text-[#E1DCC9]/80 hover:text-[#E1DCC9] transition-colors pt-1 cursor-pointer font-medium"
                   >
                     ← Back to Sign Up
                   </button>
@@ -234,10 +238,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
               >
                 {/* Titles */}
                 <div className="space-y-1">
-                  <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#F1F5F9]">
+                  <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#F5F5F7]">
                     {activeTab === 'signup' ? 'Create Account' : 'Welcome Back'}
                   </h2>
-                  <p className="text-xs text-[#94A3B8] font-medium">
+                  <p className="text-xs text-[#9E9EA8] font-medium">
                     {activeTab === 'signup'
                       ? 'Start your research journey today'
                       : 'Sign in to access your intelligent workspace'}
@@ -260,16 +264,16 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
                   {/* Full Name field (Sign Up only) */}
                   {activeTab === 'signup' && (
                     <div>
-                      <label className="block text-xs font-bold text-[#F1F5F9] mb-1">Full Name</label>
+                      <label className="block text-xs font-bold text-[#F5F5F7] mb-1">Full Name</label>
                       <div className="relative">
-                        <User className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <User className="w-4 h-4 text-[#9E9EA8] absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input
                           type="text"
                           required
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
                           placeholder="Alex Morgan"
-                          className="w-full bg-[#0B0F19] border border-[#232F48] focus:border-[#00F0FF] rounded-xl pl-10 pr-3 py-2.5 text-xs sm:text-sm text-[#F1F5F9] placeholder-[#94A3B8]/50 focus:outline-none focus:ring-1 focus:ring-[#00F0FF] transition-all shadow-inner font-medium"
+                          className="w-full bg-[#000000] border border-[#44444E] focus:border-[#E1DCC9] rounded-xl pl-10 pr-3 py-2.5 text-xs sm:text-sm text-[#F5F5F7] placeholder-[#9E9EA8]/50 focus:outline-none focus:ring-1 focus:ring-[#E1DCC9] transition-all shadow-inner font-medium"
                         />
                       </div>
                     </div>
@@ -277,25 +281,25 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
 
                   {/* Email Field */}
                   <div>
-                    <label className="block text-xs font-bold text-[#F1F5F9] mb-1">Email</label>
+                    <label className="block text-xs font-bold text-[#F5F5F7] mb-1">Email</label>
                     <div className="relative">
-                      <Mail className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <Mail className="w-4 h-4 text-[#9E9EA8] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="email"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="name@company.com"
-                        className="w-full bg-[#0B0F19] border border-[#232F48] focus:border-[#00F0FF] rounded-xl pl-10 pr-3 py-2.5 text-xs sm:text-sm text-[#F1F5F9] placeholder-[#94A3B8]/50 focus:outline-none focus:ring-1 focus:ring-[#00F0FF] transition-all shadow-inner font-medium"
+                        className="w-full bg-[#000000] border border-[#44444E] focus:border-[#E1DCC9] rounded-xl pl-10 pr-3 py-2.5 text-xs sm:text-sm text-[#F5F5F7] placeholder-[#9E9EA8]/50 focus:outline-none focus:ring-1 focus:ring-[#E1DCC9] transition-all shadow-inner font-medium"
                       />
                     </div>
                   </div>
 
                   {/* Password Field */}
                   <div>
-                    <label className="block text-xs font-bold text-[#F1F5F9] mb-1">Password</label>
+                    <label className="block text-xs font-bold text-[#F5F5F7] mb-1">Password</label>
                     <div className="relative">
-                      <Lock className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <Lock className="w-4 h-4 text-[#9E9EA8] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="password"
                         required
@@ -303,20 +307,20 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full bg-[#0B0F19] border border-[#232F48] focus:border-[#00F0FF] rounded-xl pl-10 pr-3 py-2.5 text-xs sm:text-sm text-[#F1F5F9] placeholder-[#94A3B8]/50 focus:outline-none focus:ring-1 focus:ring-[#00F0FF] transition-all shadow-inner font-medium"
+                        className="w-full bg-[#000000] border border-[#44444E] focus:border-[#E1DCC9] rounded-xl pl-10 pr-3 py-2.5 text-xs sm:text-sm text-[#F5F5F7] placeholder-[#9E9EA8]/50 focus:outline-none focus:ring-1 focus:ring-[#E1DCC9] transition-all shadow-inner font-medium"
                       />
                     </div>
                   </div>
 
-                  {/* Primary Action Button (Luminous Cyber Cyan Pill Button) */}
+                  {/* Primary Action Button */}
                   <motion.button
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
                     type="submit"
-                    className="w-full bg-[#00F0FF] hover:bg-[#66F6FF] disabled:bg-[#232F48] disabled:text-[#94A3B8]/40 text-[#0B0F19] font-extrabold py-2.5 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-lg mt-1 cursor-pointer disabled:cursor-not-allowed"
+                    className="w-full bg-[#E1DCC9] hover:bg-[#EDE8D6] disabled:bg-[#44444E] disabled:text-[#9E9EA8]/40 text-[#1E1E24] font-extrabold py-2.5 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(225,220,201,0.25)] mt-1 cursor-pointer disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-[#0B0F19]" />
+                      <Loader2 className="w-4 h-4 animate-spin text-[#1E1E24]" />
                     ) : (
                       <span>{activeTab === 'signup' ? 'Register' : 'Sign In'}</span>
                     )}
@@ -325,11 +329,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
 
                 {/* Divider */}
                 <div className="relative flex items-center justify-center my-3">
-                  <div className="flex-grow border-t border-[#232F48]" />
-                  <span className="flex-shrink mx-3 text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]">
+                  <div className="flex-grow border-t border-[#44444E]/50" />
+                  <span className="flex-shrink mx-3 text-[10px] font-bold uppercase tracking-widest text-[#9E9EA8]">
                     {activeTab === 'signup' ? 'OR SIGN UP WITH' : 'OR SIGN IN WITH'}
                   </span>
-                  <div className="flex-grow border-t border-[#232F48]" />
+                  <div className="flex-grow border-t border-[#44444E]/50" />
                 </div>
 
                 {/* Social Login Buttons */}
@@ -339,7 +343,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
                     whileTap={{ scale: 0.98 }}
                     type="button"
                     onClick={() => handleSocialAuth('oauth_google')}
-                    className="flex items-center justify-center gap-2 bg-[#0B0F19] hover:bg-[#151C2C] border border-[#232F48] hover:border-[#00F0FF] rounded-xl py-2.5 px-3 text-xs font-bold text-[#F1F5F9] transition-all cursor-pointer shadow-sm"
+                    className="flex items-center justify-center gap-2 bg-[#000000]/60 hover:bg-[#1E1E24]/60 border border-[#44444E]/60 hover:border-[#E1DCC9]/70 rounded-xl py-2.5 px-3 text-xs font-bold text-[#F5F5F7] transition-all cursor-pointer shadow-sm"
                   >
                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
                       <path
@@ -367,9 +371,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
                     whileTap={{ scale: 0.98 }}
                     type="button"
                     onClick={() => handleSocialAuth('oauth_github')}
-                    className="flex items-center justify-center gap-2 bg-[#0B0F19] hover:bg-[#151C2C] border border-[#232F48] hover:border-[#00F0FF] rounded-xl py-2.5 px-3 text-xs font-bold text-[#F1F5F9] transition-all cursor-pointer shadow-sm"
+                    className="flex items-center justify-center gap-2 bg-[#000000]/60 hover:bg-[#1E1E24]/60 border border-[#44444E]/60 hover:border-[#E1DCC9]/70 rounded-xl py-2.5 px-3 text-xs font-bold text-[#F5F5F7] transition-all cursor-pointer shadow-sm"
                   >
-                    <svg className="w-3.5 h-3.5 fill-current text-[#F1F5F9]" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 fill-current text-[#F5F5F7]" viewBox="0 0 24 24">
                       <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
                     </svg>
                     <span>GitHub</span>
@@ -379,23 +383,23 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
                 {/* Footer Switch Link */}
                 <div className="text-center pt-1">
                   {activeTab === 'signup' ? (
-                    <p className="text-xs text-[#94A3B8] font-medium">
+                    <p className="text-xs text-[#9E9EA8] font-medium">
                       Already have an account?{' '}
                       <button
                         type="button"
                         onClick={() => handleTabSwitch('signin')}
-                        className="text-[#00F0FF] font-bold hover:underline transition-all cursor-pointer"
+                        className="text-[#E1DCC9] font-bold hover:underline transition-all cursor-pointer"
                       >
                         Login
                       </button>
                     </p>
                   ) : (
-                    <p className="text-xs text-[#94A3B8] font-medium">
+                    <p className="text-xs text-[#9E9EA8] font-medium">
                       Don't have an account?{' '}
                       <button
                         type="button"
                         onClick={() => handleTabSwitch('signup')}
-                        className="text-[#00F0FF] font-bold hover:underline transition-all cursor-pointer"
+                        className="text-[#E1DCC9] font-bold hover:underline transition-all cursor-pointer"
                       >
                         Register
                       </button>
@@ -408,13 +412,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
         </div>
 
         {/* Footer note */}
-        <div className="text-[11px] text-[#94A3B8] text-center shrink-0 font-medium">
+        <div className="text-[11px] text-[#9E9EA8] text-center shrink-0 font-medium">
           &copy; {new Date().getFullYear()} Nexus-RAG Intelligence Platform
         </div>
       </div>
 
-      {/* ── RIGHT PANEL: Void Midnight & Cyber Cyan Hero Panel ─────────── */}
-      <div className="hidden lg:flex w-1/2 h-full relative bg-[#0B0F19] flex-col items-center justify-center p-8 overflow-hidden">
+      {/* ── RIGHT PANEL: Pure Black Hero Panel ─────────── */}
+      <div className="hidden lg:flex w-1/2 h-full relative bg-[#000000] flex-col items-center justify-center p-8 overflow-hidden">
         
         {/* Hero Content Container */}
         <div className="relative z-10 max-w-md text-center space-y-5 flex flex-col items-center">
@@ -428,29 +432,29 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode: initialMode = 'signup'
             <Nexus3DLogo size={160} interactive={true} />
           </motion.div>
 
-          {/* Heading with Cyber Cyan & Crisp Typography */}
+          {/* Heading with Cream Linen & Dark Slate Typography */}
           <div className="space-y-2">
-            <h1 className="text-3xl xl:text-4xl font-extrabold tracking-tight text-[#F1F5F9] leading-tight">
+            <h1 className="text-3xl xl:text-4xl font-extrabold tracking-tight text-[#F5F5F7] leading-tight">
               Brightening Research With <br />
-              <span className="text-[#00F0FF]">
+              <span className="text-[#E1DCC9]">
                 Agentic Intelligence
               </span>
             </h1>
-            <p className="text-xs text-[#94A3B8] leading-relaxed max-w-xs mx-auto font-medium">
+            <p className="text-xs text-[#9E9EA8] leading-relaxed max-w-xs mx-auto font-medium">
               Automate your workflow with AI-driven insights, secure data analysis, and advanced research tools.
             </p>
           </div>
 
           {/* Stat Cards */}
           <div className="grid grid-cols-2 gap-3 w-full max-w-xs pt-2">
-            <div className="bg-[#151C2C] border border-[#232F48] rounded-xl p-3 text-center shadow-md">
-              <div className="text-xl xl:text-2xl font-black text-[#00F0FF] tracking-tight">99%</div>
-              <div className="text-[9px] font-extrabold uppercase text-[#94A3B8] tracking-wider mt-0.5">ACCURACY</div>
+            <div className="bg-[#1E1E24]/60 backdrop-blur-xl border border-[#44444E]/50 rounded-2xl p-3.5 text-center shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
+              <div className="text-xl xl:text-2xl font-black text-[#E1DCC9] tracking-tight">99%</div>
+              <div className="text-[9px] font-extrabold uppercase text-[#9E9EA8] tracking-wider mt-0.5">ACCURACY</div>
             </div>
 
-            <div className="bg-[#151C2C] border border-[#232F48] rounded-xl p-3 text-center shadow-md">
-              <div className="text-xl xl:text-2xl font-black text-[#00F0FF] tracking-tight">24/7</div>
-              <div className="text-[9px] font-extrabold uppercase text-[#94A3B8] tracking-wider mt-0.5">RESEARCH</div>
+            <div className="bg-[#1E1E24]/60 backdrop-blur-xl border border-[#44444E]/50 rounded-2xl p-3.5 text-center shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
+              <div className="text-xl xl:text-2xl font-black text-[#E1DCC9] tracking-tight">24/7</div>
+              <div className="text-[9px] font-extrabold uppercase text-[#9E9EA8] tracking-wider mt-0.5">RESEARCH</div>
             </div>
           </div>
         </div>
