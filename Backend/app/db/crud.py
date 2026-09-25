@@ -1,7 +1,7 @@
 import json
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from app.db.models import Conversation, Message, IngestedDocument
+from app.db.models import User, Conversation, Message, IngestedDocument
 
 
 # ─────────────────────────────────────────────
@@ -15,16 +15,17 @@ def get_linked_user_ids(db: Session, user_id: str) -> List[str]:
         if not user or not user.email or "@example.com" in user.email:
             return [user_id]
         
-        all_linked = db.query(User).filter(User.email == user.email).all()
-        ids = list({u.id for u in all_linked} | {user_id})
+        all_linked = db.query(User).filter(User.email == user.email.strip().lower()).all()
+        ids = list({u.id for u in all_linked if u.id} | {user_id})
         return ids
-    except Exception:
+    except Exception as e:
+        print(f"[get_linked_user_ids error]: {e}")
         return [user_id]
 
 
 def sync_user_email(db: Session, user_id: str, email: str):
     """Associates user_id with verified email address for cross-device synchronization."""
-    if not email or "@" not in email:
+    if not email or "@" not in email or "@example.com" in email:
         return
     clean_email = email.strip().lower()
     user = db.query(User).filter(User.id == user_id).first()
@@ -35,13 +36,35 @@ def sync_user_email(db: Session, user_id: str, email: str):
         user.email = clean_email
     try:
         db.commit()
-    except Exception:
+    except Exception as e:
+        print(f"[sync_user_email error]: {e}")
         db.rollback()
 
 
+def ensure_user_exists(db: Session, user_id: str, email: Optional[str] = None) -> User:
+    """Ensures user record exists without overwriting real verified email with placeholder."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        init_email = (email or f"{user_id}@example.com").strip().lower()
+        user = User(id=user_id, email=init_email)
+        db.add(user)
+        try:
+            db.commit()
+            db.refresh(user)
+        except Exception:
+            db.rollback()
+    elif email and "@" in email and "@example.com" not in email:
+        user.email = email.strip().lower()
+        try:
+            db.commit()
+            db.refresh(user)
+        except Exception:
+            db.rollback()
+    return user
+
+
 def create_conversation(db: Session, user_id: str, title: str = "New Conversation") -> Conversation:
-    from app.db.crud import create_or_update_user
-    create_or_update_user(db, user_id, f"{user_id}@example.com")
+    ensure_user_exists(db, user_id)
     conv = Conversation(title=title, user_id=user_id)
     db.add(conv)
     db.commit()
@@ -55,8 +78,7 @@ def get_or_create_conversation(db: Session, conversation_id: str, user_id: str, 
         # Check by id alone across linked devices
         conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
     if not conv:
-        from app.db.crud import create_or_update_user
-        create_or_update_user(db, user_id, f"{user_id}@example.com")
+        ensure_user_exists(db, user_id)
         conv = Conversation(id=conversation_id, title=title[:150], user_id=user_id)
         db.add(conv)
         db.commit()
@@ -94,7 +116,20 @@ def list_conversations(db: Session, user_id: str) -> List[Conversation]:
 
 def get_conversation(db: Session, conversation_id: str, user_id: str) -> Optional[Conversation]:
     linked_ids = get_linked_user_ids(db, user_id)
-    return db.query(Conversation).filter(Conversation.id == conversation_id, Conversation.user_id.in_(linked_ids)).first()
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id, Conversation.user_id.in_(linked_ids)).first()
+    if not conv:
+        # Cross-device fallback: verify if owner shares same email
+        direct_conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+        if direct_conv:
+            owner = db.query(User).filter(User.id == direct_conv.user_id).first()
+            current_user = db.query(User).filter(User.id == user_id).first()
+            if (
+                owner and current_user and owner.email and current_user.email
+                and owner.email.lower() == current_user.email.lower()
+                and "@example.com" not in owner.email
+            ):
+                return direct_conv
+    return conv
 
 
 def update_conversation_title(db: Session, conversation_id: str, title: str, user_id: str) -> Optional[Conversation]:
@@ -289,10 +324,16 @@ def create_or_update_user(db: Session, user_id: str, email: str, first_name: str
         user = User(id=user_id, email=email, first_name=first_name, last_name=last_name)
         db.add(user)
     else:
-        user.email = email
-        user.first_name = first_name
-        user.last_name = last_name
-    db.commit()
-    db.refresh(user)
+        if email and "@" in email and "@example.com" not in email:
+            user.email = email.strip().lower()
+        if first_name:
+            user.first_name = first_name
+        if last_name:
+            user.last_name = last_name
+    try:
+        db.commit()
+        db.refresh(user)
+    except Exception:
+        db.rollback()
     return user
 

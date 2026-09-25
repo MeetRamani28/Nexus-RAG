@@ -152,8 +152,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const list: ConversationListItem[] = await res.json();
         const validList = list.filter((c) => c.message_count > 0 || c.source_file);
         setConversations(validList);
-        if (validList.length > 0 && !activeConversationIdRef.current) {
+        if (validList.length > 0 && (!activeConversationIdRef.current || activeConversationIdRef.current.startsWith("conv-"))) {
           setActiveConversationId(validList[0].id);
+          loadMessages(validList[0].id);
         } else if (validList.length === 0 && !activeConversationIdRef.current) {
           setActiveConversationId(`conv-${Date.now()}`);
         }
@@ -174,7 +175,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
       try {
-        const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`);
+        const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}?_t=${Date.now()}`, {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache" },
+        });
         if (!res.ok) {
           setMessages([]);
           setActiveSourceFile(null);
@@ -257,11 +261,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Switch Conversation
   const selectConversation = (id: string) => {
-    if (id === activeConversationId) {
-      if (window.innerWidth < 768) setSidebarOpen(false);
-      return;
-    }
     setActiveConversationId(id);
+    loadMessages(id);
     if (window.innerWidth < 768) setSidebarOpen(false);
   };
 

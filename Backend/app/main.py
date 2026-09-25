@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import time
 import asyncio
 import tempfile
 import uuid
@@ -442,7 +443,6 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                 from langchain_groq import ChatGroq
                 from langchain_core.prompts import ChatPromptTemplate
                 from app.llm_manager import fetch_active_groq_models
-                import time
                 
                 prompt = ChatPromptTemplate.from_messages([
                     ("system", "You are Nexus-RAG, an intelligent Enterprise AI Assistant. Provide helpful, accurate, concise, and beautifully formatted responses using Markdown."),
@@ -477,7 +477,7 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                     print(f"[Fast Path LLM Warning]: Model '{active_model}' failed ({fast_path_err}). Attempting fallback...")
                     try:
                         available = fetch_active_groq_models(groq_api_key)
-                        fallback_model = next((m for m in available if m != active_model), "llama-3.1-8b-instant")
+                        fallback_model = next((m for m in available if m != active_model), "qwen/qwen3.8-27b")
                         fallback_llm = ChatGroq(
                             temperature=0.7,
                             model_name=fallback_model,
@@ -618,7 +618,7 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                 print(f"[RAG Stream Warning]: Model '{active_model}' failed ({primary_err}). Trying fallback...")
                 try:
                     available = fetch_active_groq_models(groq_api_key)
-                    fallback_model = next((m for m in available if m != active_model), "llama-3.1-8b-instant")
+                    fallback_model = next((m for m in available if m != active_model), "qwen/qwen3.8-27b")
                     fallback_llm = ChatGroq(
                         temperature=0.1,
                         model_name=fallback_model,
@@ -650,12 +650,18 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                     user_id=user_id,
                     doc_id=source_file or "general"
                 )
-            if payload.conversation_id:
+            if payload.conversation_id and full_generation:
                 crud.add_message(db, payload.conversation_id, user_id, "assistant", full_generation, citations)
 
 
         except Exception as e:
-            yield {"event": "message", "data": json.dumps({"token": f"\n\n[System Error]: {str(e)}"})}
+            err_msg = f"[System Error]: {str(e)}"
+            yield {"event": "message", "data": json.dumps({"token": f"\n\n{err_msg}"})}
+            if payload.conversation_id:
+                try:
+                    crud.add_message(db, payload.conversation_id, user_id, "assistant", err_msg, [])
+                except Exception:
+                    pass
 
         yield {"event": "done", "data": "[DONE]"}
 
