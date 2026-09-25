@@ -11,7 +11,7 @@ class HyDEEngine:
     """
 
     def __init__(self):
-        self.enabled = os.getenv("HYDE_ENABLED", "true").strip().lower() in ["true", "1", "yes"]
+        self.enabled = os.getenv("HYDE_ENABLED", "false").strip().lower() in ["true", "1", "yes"]
 
     def generate_hypothetical_document(self, query: str) -> str:
         """
@@ -21,17 +21,16 @@ class HyDEEngine:
         if not self.enabled:
             return query
 
-        # Fast path: concise / direct queries (<= 12 words) match dense & BM25 directly; save 250ms LLM overhead
-        if len(query.strip().split()) <= 12:
+        # Fast path: concise queries match dense vectors directly; save LLM round-trip
+        if len(query.strip().split()) <= 8:
             return query
 
         groq_api_key = os.getenv("GROQ_API_KEY", "")
         if not groq_api_key:
             return query
 
-
-        # Use ultra-fast 8b model for instantaneous query expansion (<250ms)
-        hyde_model = "llama-3.1-8b-instant"
+        # Use fast working model for query expansion
+        hyde_model = "openai/gpt-oss-20b"
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", "Write a concise 2-sentence hypothetical document snippet that answers this question. Output ONLY the factual text."),

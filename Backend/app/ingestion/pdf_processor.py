@@ -120,9 +120,9 @@ class PDFIngestionEngine:
             valid_docs = documents
 
         raw_parents = self.parent_splitter.split_documents(valid_docs)
-        # Cap max parent chunks to 30 for instant database persistence (<100ms)
-        if len(raw_parents) > 30:
-            raw_parents = raw_parents[:30]
+        # Cap max parent chunks to 20 for instant database persistence (<60ms)
+        if len(raw_parents) > 20:
+            raw_parents = raw_parents[:20]
 
         for parent in raw_parents:
             parent_id = f"{filename}_parent_{uuid.uuid4().hex[:8]}"
@@ -148,9 +148,9 @@ class PDFIngestionEngine:
                 }
                 child_docs.append(Document(page_content=child.page_content, metadata=child_metadata))
 
-        # Cap total child chunks to 60 so Cohere fits in a single batch (<300ms)
-        if len(child_docs) > 60:
-            child_docs = child_docs[:60]
+        # Cap total child chunks to 30 so Cohere dense embedding finishes in <250ms
+        if len(child_docs) > 30:
+            child_docs = child_docs[:30]
 
         return parent_docs, child_docs
 

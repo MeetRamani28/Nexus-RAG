@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Send, User, Loader2, Copy, Check, FileText,
   Sparkles, FileSearch, BrainCircuit, Layers,
@@ -9,38 +9,16 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import type { ChatMessage, Citation, ConversationDetail, IngestResponse, LlmModel } from "../types";
 import { CitationBadge } from "./CitationBadge";
 import { Nexus3DLogo } from "./Nexus3DLogo";
-import { toast } from "sonner";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-
-const DEFAULT_MODELS: LlmModel[] = [
-  { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B", tag: "Recommended" },
-  { id: "qwen/qwen3.8-27b", name: "Qwen 3.8 27B", tag: "High Reasoning" },
-  { id: "mixtral-8x7b-32768", name: "Mixtral 8x7B", tag: "Long Context" },
-  { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B", tag: "Ultra Fast" },
-];
+import { useChat, type PipelineStep } from "../context/ChatContext";
 
 const SUGGESTIONS = [
-  "Summarize the key financial highlights and revenue figures",
-  "What are the primary operational risks mentioned?",
-  "List the core product features and architecture details",
-  "Compare performance metrics across the report periods",
+  "Summarize the key highlights and core qualifications",
+  "What are the primary operational risks or challenges mentioned?",
+  "List the core technical skills, architecture, and projects",
 ];
 
-type PipelineStep = "idle" | "retrieving" | "reranking" | "generating" | "done";
-
-interface Props {
-  conversationId: string | null;
-  docsVersion?: number;
-  onDocUploaded: () => void;
-  onConversationUpdated?: () => void;
-  onConversationDocChanged?: (id: string, filename: string | null) => void;
-  onNewChat?: () => void;
-  fetchAuth: (url: string, options?: RequestInit) => Promise<Response>;
-}
 
 // ─── Copy Button ─────────────────────────────────────────────────────────────
 const CopyButton: React.FC<{ text: string }> = ({ text }) => {
@@ -141,30 +119,34 @@ const processMessageContent = (content: string) => {
 };
 
 // ─── Main Component ──────────────────────────────────────────────────────────
-export const ChatInterface: React.FC<Props> = ({
-  conversationId,
-  docsVersion = 0,
-  onDocUploaded,
-  onConversationUpdated,
-  onConversationDocChanged,
-  onNewChat,
-  fetchAuth,
-}) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [pipeline, setPipeline] = useState<PipelineStep>("idle");
-  
-  // Models & Selection
-  const [availableModels, setAvailableModels] = useState<LlmModel[]>(DEFAULT_MODELS);
-  const [selectedModel, setSelectedModel] = useState<string>("llama-3.3-70b-versatile");
-  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+// ─── Main Component ──────────────────────────────────────────────────────────
+export const ChatInterface: React.FC = () => {
+  const {
+    activeConversationId: conversationId,
+    activeSourceFile,
+    messages,
+    isStreaming,
+    uploadingPdf,
+    uploadMessage,
+    uploadProgress,
+    pipeline,
+    existingDocs,
+    selectedModel,
+    availableModels,
+    setSelectedModel,
+    sendMessage,
+    uploadPdf: handlePdfUpload,
+    cancelUpload: handleCancelUpload,
+    attachDocument: handleAttachExistingDoc,
+    detachDocument: handleDetachDocument,
+    newChat: onNewChat,
+  } = useChat();
 
-  // Ingest upload state inside input bar
-  const [attachedFile, setAttachedFile] = useState<File | null>(null);
-  const [uploadingPdf, setUploadingPdf] = useState(false);
-  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; name: string } | null>(null);
+  const [input, setInput] = useState("");
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+  const [docPickerOpen, setDocPickerOpen] = useState(false);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [docFilterQuery, setDocFilterQuery] = useState("");
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -172,27 +154,6 @@ export const ChatInterface: React.FC<Props> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  const [docPickerOpen, setDocPickerOpen] = useState(false);
-  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
-  const [docFilterQuery, setDocFilterQuery] = useState("");
-
-  // Fetch Available Models from Groq via backend
-  useEffect(() => {
-    fetchAuth(`${API_BASE_URL}/api/v1/models`)
-      .then((r) => r.json())
-      .then((data: LlmModel[]) => {
-        if (data && data.length > 0) {
-          setAvailableModels(data);
-          const ids = data.map((m) => m.id);
-          const bestModel = data.find((m) => m.id.includes("70b") || m.id.includes("instant")) || data[0];
-          setSelectedModel((prev) => (prev && prev !== "mixtral-8x7b-32768" && ids.includes(prev) ? prev : bestModel.id));
-        }
-      })
-      .catch(() => {});
-
-  }, [fetchAuth]);
 
   // Close model & attach dropdowns on outside click
   useEffect(() => {
@@ -208,77 +169,7 @@ export const ChatInterface: React.FC<Props> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const [activeSourceFile, setActiveSourceFile] = useState<string | null>(null);
-  const [existingDocs, setExistingDocs] = useState<{ filename: string; parent_chunks?: number; child_chunks?: number }[]>([]);
-
-  // Fetch ingested docs list for selection
-  const fetchExistingDocs = useCallback(async () => {
-    try {
-      const res = await fetchAuth(`${API_BASE_URL}/api/v1/documents?_t=${Date.now()}`, {
-        cache: "no-store",
-        headers: { "Cache-Control": "no-cache" },
-      });
-      if (res.ok) {
-        const docs = await res.json();
-        setExistingDocs(docs);
-        // If current attached file was deleted from knowledge base, detach it locally immediately!
-        setActiveSourceFile((current) => {
-          if (current && !docs.some((d: { filename: string }) => d.filename === current)) {
-            return null;
-          }
-          return current;
-        });
-      }
-    } catch {
-      // ignore
-    }
-  }, [fetchAuth]);
-
-  useEffect(() => {
-    fetchExistingDocs();
-  }, [fetchExistingDocs, docsVersion]);
-
-  // Load Messages for active conversation
-  const loadMessages = useCallback(async (id: string) => {
-    if (id.startsWith("conv-") || id.startsWith("temp-")) {
-      setMessages([]);
-      setActiveSourceFile(null);
-      return;
-    }
-    try {
-      const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`);
-      if (!res.ok) {
-        setMessages([]);
-        setActiveSourceFile(null);
-        return;
-      }
-      const data: ConversationDetail = await res.json();
-      setActiveSourceFile(data.source_file || null);
-      setMessages(
-        data.messages.map((m) => ({
-          id: m.id,
-          role: m.role as "user" | "assistant",
-          content: m.content,
-          citations: m.citations as Citation[],
-          isStreaming: false,
-        }))
-      );
-    } catch {
-      setMessages([]);
-      setActiveSourceFile(null);
-    }
-  }, [fetchAuth]);
-
-  // Instant Reset on active conversation change
-  useEffect(() => {
-    setAttachedFile(null);
-    setUploadMessage(null);
-    setMessages([]);
-    setActiveSourceFile(null);
-    if (conversationId) loadMessages(conversationId);
-  }, [conversationId, loadMessages]);
-
-  // Safe container-only scrolling (never scrolls window or page ancestors)
+  // Safe container-only scrolling
   useEffect(() => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTo({
@@ -309,282 +200,8 @@ export const ChatInterface: React.FC<Props> = ({
     URL.revokeObjectURL(url);
   };
 
-  // Cancel / Abort PDF upload & detach current PDF
-  const handleCancelUpload = async () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    setAttachedFile(null);
-    setUploadingPdf(false);
-    setUploadProgress(null);
-    setUploadMessage(null);
-    setActiveSourceFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-    if (conversationId && !conversationId.startsWith("conv-")) {
-      try {
-        await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${conversationId}/detach_document`, {
-          method: "POST",
-        });
-        if (conversationId && onConversationDocChanged) {
-          onConversationDocChanged(conversationId, null);
-        }
-      } catch {
-        // ignore
-      }
-    }
-  };
-
-  // Handle PDF Upload
-  const handlePdfUpload = async (incomingFiles: FileList | File[] | File) => {
-    const fileList: File[] = incomingFiles instanceof FileList 
-      ? Array.from(incomingFiles) 
-      : Array.isArray(incomingFiles) 
-      ? incomingFiles 
-      : [incomingFiles];
-
-    const pdfFiles = fileList.filter((f) => f.name.toLowerCase().endsWith(".pdf"));
-    if (pdfFiles.length === 0) {
-      toast.error("Please select valid PDF file(s).");
-      return;
-    }
-
-    setAttachedFile(pdfFiles[0]);
-    setUploadingPdf(true);
-    setUploadMessage(null);
-
-    abortControllerRef.current = new AbortController();
-    const signal = abortControllerRef.current.signal;
-
-    let processedCount = 0;
-    let lastFilename = "";
-
-    try {
-      for (let i = 0; i < pdfFiles.length; i++) {
-        if (signal.aborted) break;
-        const currentFile = pdfFiles[i];
-        setAttachedFile(currentFile);
-        setUploadProgress({
-          current: i + 1,
-          total: pdfFiles.length,
-          name: currentFile.name,
-        });
-
-        const formData = new FormData();
-        formData.append("file", currentFile);
-        if (conversationId) {
-          formData.append("conversation_id", conversationId);
-        }
-
-        const res = await fetchAuth(`${API_BASE_URL}/api/v1/ingest`, {
-          method: "POST",
-          body: formData,
-          signal,
-        });
-
-        if (signal.aborted) break;
-        if (!res.ok) throw new Error(`Upload failed for ${currentFile.name}`);
-
-        const data: IngestResponse = await res.json();
-        lastFilename = data.filename;
-        processedCount++;
-      }
-
-      if (!signal.aborted && processedCount > 0) {
-        setActiveSourceFile(lastFilename);
-        setUploadMessage(
-          pdfFiles.length === 1
-            ? `Processed "${lastFilename}"`
-            : `Successfully processed ${processedCount} PDF document(s)`
-        );
-        onDocUploaded();
-        if (conversationId && onConversationDocChanged) {
-          onConversationDocChanged(conversationId, lastFilename);
-        }
-        fetchExistingDocs();
-      }
-    } catch (e: unknown) {
-      if ((e as Error)?.name === "AbortError") {
-        setUploadMessage("Upload canceled.");
-      } else {
-        setUploadMessage(e instanceof Error ? e.message : "Upload failed");
-        toast.error(e instanceof Error ? e.message : "Upload failed");
-      }
-    } finally {
-      setUploadingPdf(false);
-      setUploadProgress(null);
-      abortControllerRef.current = null;
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
-
-  // Attach existing ingested document to this conversation session
-  const handleAttachExistingDoc = async (filename: string) => {
-    if (!conversationId) return;
-    try {
-      const res = await fetchAuth(
-        `${API_BASE_URL}/api/v1/conversations/${conversationId}/attach_document?filename=${encodeURIComponent(filename)}`,
-        { method: "POST" }
-      );
-      if (res.ok) {
-        setActiveSourceFile(filename);
-        setAttachedFile(null);
-        setUploadMessage(`Attached document "${filename}"`);
-        setDocPickerOpen(false);
-        setAttachMenuOpen(false);
-        if (onConversationDocChanged) {
-          onConversationDocChanged(conversationId, filename);
-        }
-      }
-    } catch {
-      toast.error("Failed to attach document");
-    }
-  };
-
-  // Check if a document is bound to this conversation session
-  const hasDocument = Boolean(activeSourceFile || attachedFile);
+  const hasDocument = Boolean(activeSourceFile);
   const isInputDisabled = isStreaming || uploadingPdf;
-
-  // Send Message (Fast path or RAG - works seamlessly with or without document)
-  const sendMessage = async (questionText: string) => {
-    if (!conversationId || isStreaming || uploadingPdf) return;
-    const q = questionText.trim();
-    if (!q) return;
-
-    setInput("");
-
-    const uid = `u-${Date.now()}`;
-    const aid = `a-${Date.now() + 1}`;
-
-    setMessages((p) => [
-      ...p,
-      { id: uid, role: "user", content: q },
-      { id: aid, role: "assistant", content: "", citations: [], isStreaming: true },
-    ]);
-    setIsStreaming(true);
-    setPipeline("idle");
-
-    try {
-      const res = await fetchAuth(`${API_BASE_URL}/api/v1/query/stream`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: q,
-          top_k: 5,
-          conversation_id: conversationId,
-          model: selectedModel,
-        }),
-      });
-
-      if (!res.body) throw new Error("No stream");
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let cites: Citation[] = [];
-      let started = false;
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        const lines = decoder.decode(value, { stream: true }).split("\n");
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const raw = line.replace("data: ", "").trim();
-          if (raw === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(raw);
-            if (parsed.agent_step) {
-              if (parsed.agent_step.includes("Retrieval Agent")) setPipeline("retrieving");
-              else if (parsed.agent_step.includes("Re-Ranking Agent")) setPipeline("reranking");
-              else if (parsed.agent_step.includes("Web Search") || parsed.agent_step.includes("Synthesis Agent")) setPipeline("generating");
-
-              setMessages((p) =>
-                p.map((m) =>
-                  m.id === aid
-                    ? { ...m, agentSteps: [...(m.agentSteps || []), parsed.agent_step] }
-                    : m
-                )
-              );
-            }
-            if (parsed.citations) {
-              cites = parsed.citations;
-              setMessages((p) =>
-                p.map((m) => (m.id === aid ? { ...m, citations: cites } : m))
-              );
-            }
-            if (parsed.telemetry || parsed.ttft_ms !== undefined) {
-              const tel = parsed.telemetry || {
-                ttft_ms: parsed.ttft_ms,
-                cache_hit: parsed.cache_hit,
-                score: parsed.score,
-                model: parsed.model,
-              };
-              setMessages((p) =>
-                p.map((m) => (m.id === aid ? { ...m, telemetry: tel } : m))
-              );
-            }
-            if (parsed.token) {
-              const tokenText: string = parsed.token;
-              const isModelError =
-                tokenText.includes("model_not_found") ||
-                tokenText.includes("does not exist") ||
-                (tokenText.includes("Error code: 404") && tokenText.includes("model"));
-
-              if (isModelError) {
-                fetchAuth(`${API_BASE_URL}/api/v1/models`)
-                  .then((r) => r.json())
-                  .then((freshModels: LlmModel[]) => {
-                    if (freshModels && freshModels.length > 0) {
-                      setAvailableModels(freshModels);
-                      setSelectedModel(freshModels[0].id);
-                      toast.error(
-                        `⚠️ Model not available. Auto-switched to "${freshModels[0].name}". Please try your question again.`,
-                        { duration: 8000 }
-                      );
-                    } else {
-                      toast.error("⚠️ Selected model is not available. Please select another model from the dropdown.", { duration: 8000 });
-                    }
-                  })
-                  .catch(() => {
-                    toast.error("⚠️ Selected model is not available. Please select another model from the dropdown.", { duration: 8000 });
-                  });
-              }
-
-              if (!started) {
-                setPipeline("done");
-                started = true;
-              }
-              setMessages((p) =>
-                p.map((m) => (m.id === aid ? { ...m, content: m.content + parsed.token } : m))
-              );
-            }
-          } catch {
-            // ignore non-JSON frames
-          }
-        }
-      }
-    } catch {
-      toast.error("Cannot reach backend server. Please verify backend connection.", { duration: 5000 });
-      setMessages((p) =>
-        p.map((m) =>
-          m.id === aid
-            ? { ...m, content: "⚠️ Connection error. Unable to reach backend service. Please check backend connection and try again." }
-            : m
-        )
-      );
-    } finally {
-      setPipeline("idle");
-      setIsStreaming(false);
-      setMessages((p) =>
-        p.map((m) => (m.id === aid ? { ...m, isStreaming: false } : m))
-      );
-      onConversationUpdated?.();
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -688,8 +305,8 @@ export const ChatInterface: React.FC<Props> = ({
                   <p className="text-sm font-semibold text-[#E1DCC9] mb-1">
                     {uploadProgress
                       ? `Uploading PDF ${uploadProgress.current} of ${uploadProgress.total}: ${uploadProgress.name}`
-                      : attachedFile
-                      ? attachedFile.name
+                      : activeSourceFile
+                      ? activeSourceFile
                       : "Drop single or multiple PDFs here or click to browse"}
                   </p>
                   <p className="text-[11px] text-[#9E9EA8]">Upload PDF documents to start analyzing</p>
@@ -941,7 +558,7 @@ export const ChatInterface: React.FC<Props> = ({
                 <span className="text-[#E1DCC9] font-semibold truncate">
                   {uploadProgress
                     ? `Uploading PDF ${uploadProgress.current} of ${uploadProgress.total}: ${uploadProgress.name}`
-                    : attachedFile?.name || activeSourceFile || "PDF Document Attached"}
+                    : activeSourceFile || "PDF Document Attached"}
                 </span>
                 <span className={`text-[10px] px-2 py-0.5 rounded font-medium shrink-0 hidden sm:inline border ${
                   uploadingPdf 
@@ -971,7 +588,7 @@ export const ChatInterface: React.FC<Props> = ({
                 )}
                 <button
                   type="button"
-                  onClick={handleCancelUpload}
+                  onClick={uploadingPdf ? handleCancelUpload : handleDetachDocument}
                   className="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-800/40 px-2 py-0.5 rounded-lg transition-colors flex items-center gap-1 text-[11px] font-semibold cursor-pointer shrink-0"
                   title="Cancel PDF upload / detach document"
                 >
@@ -1067,7 +684,7 @@ export const ChatInterface: React.FC<Props> = ({
                   : uploadingPdf
                   ? "⏳ Ingesting & embedding PDF document(s)... Please wait."
                   : hasDocument
-                  ? `Ask anything about "${activeSourceFile || attachedFile?.name}"...`
+                  ? `Ask anything about "${activeSourceFile}"...`
                   : "Ask any general question, or attach a PDF to query documents..."
               }
               disabled={isInputDisabled}

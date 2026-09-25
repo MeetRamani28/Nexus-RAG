@@ -8,6 +8,37 @@ from app.db.models import Conversation, Message, IngestedDocument
 # Conversation CRUD
 # ─────────────────────────────────────────────
 
+def get_linked_user_ids(db: Session, user_id: str) -> List[str]:
+    """Finds all user_ids associated with the same verified email for cross-device sync."""
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user or not user.email or "@example.com" in user.email:
+            return [user_id]
+        
+        all_linked = db.query(User).filter(User.email == user.email).all()
+        ids = list({u.id for u in all_linked} | {user_id})
+        return ids
+    except Exception:
+        return [user_id]
+
+
+def sync_user_email(db: Session, user_id: str, email: str):
+    """Associates user_id with verified email address for cross-device synchronization."""
+    if not email or "@" not in email:
+        return
+    clean_email = email.strip().lower()
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        user = User(id=user_id, email=clean_email)
+        db.add(user)
+    else:
+        user.email = clean_email
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
 def create_conversation(db: Session, user_id: str, title: str = "New Conversation") -> Conversation:
     from app.db.crud import create_or_update_user
     create_or_update_user(db, user_id, f"{user_id}@example.com")
@@ -21,7 +52,7 @@ def create_conversation(db: Session, user_id: str, title: str = "New Conversatio
 def get_or_create_conversation(db: Session, conversation_id: str, user_id: str, title: str = "New Conversation") -> Conversation:
     conv = get_conversation(db, conversation_id, user_id)
     if not conv:
-        # Check by id alone in case user_id is slightly different
+        # Check by id alone across linked devices
         conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
     if not conv:
         from app.db.crud import create_or_update_user
@@ -50,12 +81,20 @@ def cleanup_empty_conversations(db: Session, user_id: str):
 
 
 def list_conversations(db: Session, user_id: str) -> List[Conversation]:
-    cleanup_empty_conversations(db, user_id)
-    return db.query(Conversation).filter(Conversation.user_id == user_id).order_by(Conversation.updated_at.desc()).all()
+    linked_ids = get_linked_user_ids(db, user_id)
+    for uid in linked_ids:
+        cleanup_empty_conversations(db, uid)
+    return (
+        db.query(Conversation)
+        .filter(Conversation.user_id.in_(linked_ids))
+        .order_by(Conversation.updated_at.desc())
+        .all()
+    )
 
 
 def get_conversation(db: Session, conversation_id: str, user_id: str) -> Optional[Conversation]:
-    return db.query(Conversation).filter(Conversation.id == conversation_id, Conversation.user_id == user_id).first()
+    linked_ids = get_linked_user_ids(db, user_id)
+    return db.query(Conversation).filter(Conversation.id == conversation_id, Conversation.user_id.in_(linked_ids)).first()
 
 
 def update_conversation_title(db: Session, conversation_id: str, title: str, user_id: str) -> Optional[Conversation]:
@@ -141,7 +180,8 @@ def get_messages(db: Session, conversation_id: str) -> List[Message]:
 # ─────────────────────────────────────────────
 
 def doc_exists_by_hash(db: Session, file_hash: str, user_id: str) -> Optional[IngestedDocument]:
-    return db.query(IngestedDocument).filter(IngestedDocument.file_hash == file_hash, IngestedDocument.user_id == user_id).first()
+    linked_ids = get_linked_user_ids(db, user_id)
+    return db.query(IngestedDocument).filter(IngestedDocument.file_hash == file_hash, IngestedDocument.user_id.in_(linked_ids)).first()
 
 
 def save_ingested_doc(
@@ -161,11 +201,13 @@ def save_ingested_doc(
 
 
 def list_ingested_docs(db: Session, user_id: str) -> List[IngestedDocument]:
-    return db.query(IngestedDocument).filter(IngestedDocument.user_id == user_id).order_by(IngestedDocument.ingested_at.desc()).all()
+    linked_ids = get_linked_user_ids(db, user_id)
+    return db.query(IngestedDocument).filter(IngestedDocument.user_id.in_(linked_ids)).order_by(IngestedDocument.ingested_at.desc()).all()
 
 
 def delete_ingested_doc(db: Session, filename: str, user_id: str) -> bool:
-    doc = db.query(IngestedDocument).filter(IngestedDocument.filename == filename, IngestedDocument.user_id == user_id).first()
+    linked_ids = get_linked_user_ids(db, user_id)
+    doc = db.query(IngestedDocument).filter(IngestedDocument.filename == filename, IngestedDocument.user_id.in_(linked_ids)).first()
     if not doc:
         doc = db.query(IngestedDocument).filter(IngestedDocument.filename == filename).first()
     if not doc:

@@ -6,19 +6,21 @@ _active_model_cache: Optional[str] = None
 
 # Priority ranking for text generation models on Groq
 PREFERRED_MODEL_PRIORITY: List[str] = [
+    "qwen/qwen3.8-27b",
+    "openai/gpt-oss-20b",
+    "openai/gpt-oss-120b",
     "llama-3.3-70b-versatile",
     "llama-3.1-8b-instant",
-    "qwen/qwen3.8-27b",
-    "mixtral-8x7b-32768",
 ]
 
-# Keywords to exclude non-chat/audio/guardrail models
+# Keywords to exclude non-chat/audio/guardrail/decommissioned models
 EXCLUDE_KEYWORDS: List[str] = [
     "whisper",
     "guard",
     "safeguard",
     "orpheus",
-    "allam"
+    "allam",
+    "mixtral",
 ]
 
 def fetch_active_groq_models(groq_api_key: str) -> List[str]:

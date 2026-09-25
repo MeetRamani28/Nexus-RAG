@@ -119,10 +119,9 @@ def list_available_models():
     active_ids = fetch_active_groq_models(groq_api_key)
     
     default_models = [
-        {"id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B", "tag": "Fast & Smart"},
-        {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B", "tag": "Ultra Fast"},
-        {"id": "qwen/qwen3.8-27b", "name": "Qwen 3.8 27B", "tag": "High Reasoning"},
-        {"id": "mixtral-8x7b-32768", "name": "Mixtral 8x7B", "tag": "Long Context"},
+        {"id": "qwen/qwen3.8-27b", "name": "Qwen 3.8 27B", "tag": "Fast & Smart"},
+        {"id": "openai/gpt-oss-20b", "name": "GPT-OSS 20B", "tag": "Ultra Fast"},
+        {"id": "openai/gpt-oss-120b", "name": "GPT-OSS 120B", "tag": "High Reasoning"},
     ]
     
     if active_ids:
@@ -135,7 +134,7 @@ def list_available_models():
         result = []
         for m_id in active_ids:
             name = m_id.split("/")[-1].replace("-", " ").title()
-            tag = "Ultra Fast" if "instant" in m_id or "8b" in m_id else "Fast & Smart" if "70b" in m_id else "Groq Active"
+            tag = "Ultra Fast" if "20b" in m_id or "instant" in m_id or "8b" in m_id else "High Reasoning" if "120b" in m_id else "Fast & Smart"
             result.append({"id": m_id, "name": name, "tag": tag})
         return result
         
@@ -417,8 +416,12 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
                 yield {"event": "done", "data": "[DONE]"}
                 return
 
-            # 2. Check Redis Semantic Cache
-            cached_result = semantic_cache.get_cached_response(payload.question)
+            # 2. Check Redis Semantic Cache (Strictly scoped by user and document)
+            cached_result = semantic_cache.get_cached_response(
+                payload.question,
+                user_id=user_id,
+                doc_id=source_file or "general"
+            )
             if cached_result:
                 cached_generation, cached_citations, score = cached_result
                 yield {"event": "citations", "data": json.dumps({"citations": cached_citations})}
@@ -499,7 +502,13 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
 
                 full_generation = "".join(generation_chunks)
                 if full_generation and not full_generation.startswith("Error"):
-                    semantic_cache.set_cached_response(payload.question, full_generation, [])
+                    semantic_cache.set_cached_response(
+                        payload.question,
+                        full_generation,
+                        [],
+                        user_id=user_id,
+                        doc_id=source_file or "general"
+                    )
                 if payload.conversation_id:
                     crud.add_message(db, payload.conversation_id, user_id, "assistant", full_generation, [])
                 
@@ -634,7 +643,13 @@ async def stream_query(request: Request, payload: QueryRequest, db: Session = De
 
             full_generation = "".join(generation_chunks)
             if full_generation and not full_generation.startswith("Error"):
-                semantic_cache.set_cached_response(payload.question, full_generation, citations)
+                semantic_cache.set_cached_response(
+                    payload.question,
+                    full_generation,
+                    citations,
+                    user_id=user_id,
+                    doc_id=source_file or "general"
+                )
             if payload.conversation_id:
                 crud.add_message(db, payload.conversation_id, user_id, "assistant", full_generation, citations)
 

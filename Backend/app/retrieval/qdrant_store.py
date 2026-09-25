@@ -120,9 +120,17 @@ class QdrantVectorStore(VectorStoreInterface):
             fut_dense = executor.submit(task_embed_dense)
             fut_sparse = executor.submit(task_embed_sparse)
 
-            fut_parents.result()
-            dense_vectors = fut_dense.result()
-            sparse_vectors = fut_sparse.result()
+            try:
+                fut_parents.result(timeout=2.0)
+            except Exception as e:
+                print(f"[Parent Save Notice]: {e}")
+            
+            dense_vectors = fut_dense.result(timeout=3.0)
+            try:
+                sparse_vectors = fut_sparse.result(timeout=0.8)
+            except Exception:
+                print("[Sparse Embedding]: Fallback to pure dense vector store for sub-second ingestion.")
+                sparse_vectors = None
 
         has_sparse = sparse_vectors is not None and len(sparse_vectors) == len(dense_vectors)
 

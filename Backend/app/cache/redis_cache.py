@@ -50,19 +50,30 @@ class RedisSemanticCache:
             self.client = redis.Redis.from_url(self.redis_url, decode_responses=True, socket_timeout=2.0)
             self.client.ping()
             print(f"[Redis Cache]: Connected to Redis server at {self.redis_url}")
+            # Purge any old contaminated legacy keys (default_user or all)
+            legacy_keys = self.client.keys("nexus_cache:default_user:*")
+            if legacy_keys:
+                self.client.delete(*legacy_keys)
+                print(f"[Redis Cache]: Cleaned {len(legacy_keys)} legacy contaminated cache keys.")
         except Exception as e:
             print(f"[Redis Cache Warning]: Could not connect to Redis ({e}). Using InMemory fallback.")
             self.client = None
 
+    def _sanitize(self, val: str) -> str:
+        import re
+        return re.sub(r"[^a-zA-Z0-9_\-]", "_", str(val or "general")).strip("_") or "general"
+
     def get_cached_response(
-        self, query: str, user_id: str = "default_user", doc_id: str = "all"
+        self, query: str, user_id: str = "default_user", doc_id: str = "general"
     ) -> Optional[Tuple[str, List[Dict[str, Any]], float]]:
         """
         Checks Redis (or InMemory) for semantic cache hit strictly scoped to user_id and doc_id.
         Returns Tuple of (cached_answer, citation_sources, similarity_score) if hit (> threshold), else None.
         """
         try:
-            search_pattern = f"nexus_cache:{user_id}:{doc_id}:*"
+            safe_user = self._sanitize(user_id)
+            safe_doc = self._sanitize(doc_id)
+            search_pattern = f"nexus_cache:{safe_user}:{safe_doc}:*"
             cache_keys = []
 
             if self.client:
@@ -127,15 +138,17 @@ class RedisSemanticCache:
         generation: str,
         citation_sources: List[Dict[str, Any]],
         user_id: str = "default_user",
-        doc_id: str = "all",
+        doc_id: str = "general",
         ttl_seconds: int = 86400
     ) -> None:
         """
         Caches a query, its embedding vector, answer generation, and citations scoped by user_id & doc_id.
         """
         try:
+            safe_user = self._sanitize(user_id)
+            safe_doc = self._sanitize(doc_id)
             query_vector = self.embeddings.embed_query(query)
-            cache_id = f"nexus_cache:{user_id}:{doc_id}:{uuid.uuid4().hex[:12]}"
+            cache_id = f"nexus_cache:{safe_user}:{safe_doc}:{uuid.uuid4().hex[:12]}"
             payload = {
                 "query": query,
                 "user_id": user_id,
@@ -148,6 +161,6 @@ class RedisSemanticCache:
                 self.client.set(cache_id, json.dumps(payload), ex=ttl_seconds)
             else:
                 self._in_memory_cache[cache_id] = payload
-            print(f"[Semantic Cache SET]: Cached response for User '{user_id}' Doc '{doc_id}' Key '{cache_id}'")
+            print(f"[Semantic Cache SET]: Cached response for User '{safe_user}' Doc '{safe_doc}' Key '{cache_id}'")
         except Exception as e:
             print(f"[Semantic Cache Write Error]: {e}")
