@@ -205,16 +205,21 @@ def get_conversation(conversation_id: str, response: Response, db: Session = Dep
     conv = crud.get_conversation(db, conversation_id, user_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    messages = [
-        MessageResponse(
-            id=m.id,
-            role=m.role,
-            content=m.content,
-            citations=json.loads(m.citations_json or "[]"),
-            created_at=m.created_at,
+    messages = []
+    for m in conv.messages:
+        try:
+            cits = json.loads(m.citations_json or "[]")
+        except Exception:
+            cits = []
+        messages.append(
+            MessageResponse(
+                id=m.id,
+                role=m.role,
+                content=m.content,
+                citations=cits,
+                created_at=m.created_at,
+            )
         )
-        for m in conv.messages
-    ]
     return ConversationDetail(
         id=conv.id,
         title=conv.title,

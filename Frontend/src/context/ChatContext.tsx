@@ -140,36 +140,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [fetchAuth]);
 
-  // Fetch Conversation List
-  const refreshConversations = useCallback(async () => {
-    setIsLoadingConversations(true);
-    try {
-      const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations?_t=${Date.now()}`, {
-        cache: "no-store",
-        headers: { "Cache-Control": "no-cache" },
-      });
-      if (res.ok) {
-        const list: ConversationListItem[] = await res.json();
-        const validList = list.filter((c) => c.message_count > 0 || c.source_file);
-        setConversations(validList);
-        if (validList.length > 0 && (!activeConversationIdRef.current || activeConversationIdRef.current.startsWith("conv-"))) {
-          setActiveConversationId(validList[0].id);
-          loadMessages(validList[0].id);
-        } else if (validList.length === 0 && !activeConversationIdRef.current) {
-          setActiveConversationId(`conv-${Date.now()}`);
-        }
-      }
-    } catch {
-      // ignore
-    } finally {
-      setIsLoadingConversations(false);
-    }
-  }, [fetchAuth]);
-
   // Fetch Messages for an active conversation
   const loadMessages = useCallback(
     async (id: string) => {
-      if (id.startsWith("conv-") || id.startsWith("temp-")) {
+      if (!id || id.startsWith("draft-")) {
         setMessages([]);
         setActiveSourceFile(null);
         return;
@@ -180,8 +154,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           headers: { "Cache-Control": "no-cache" },
         });
         if (!res.ok) {
-          setMessages([]);
-          setActiveSourceFile(null);
           return;
         }
         const data: ConversationDetail = await res.json();
@@ -196,12 +168,37 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }))
         );
       } catch {
-        setMessages([]);
-        setActiveSourceFile(null);
+        // network glitch, preserve messages
       }
     },
     [fetchAuth]
   );
+
+  // Fetch Conversation List
+  const refreshConversations = useCallback(async () => {
+    setIsLoadingConversations(true);
+    try {
+      const res = await fetchAuth(`${API_BASE_URL}/api/v1/conversations?_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
+      if (res.ok) {
+        const list: ConversationListItem[] = await res.json();
+        const validList = list.filter((c) => c.message_count > 0 || c.source_file);
+        setConversations(validList);
+        if (validList.length > 0 && !activeConversationIdRef.current) {
+          setActiveConversationId(validList[0].id);
+          loadMessages(validList[0].id);
+        } else if (validList.length === 0 && !activeConversationIdRef.current) {
+          setActiveConversationId(`draft-${Date.now()}`);
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  }, [fetchAuth, loadMessages]);
 
   // Sync on activeConversationId change
   useEffect(() => {
@@ -242,7 +239,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const handleSync = () => {
       refreshConversations();
       refreshDocuments();
-      if (activeConversationIdRef.current && !activeConversationIdRef.current.startsWith("conv-")) {
+      if (activeConversationIdRef.current && !activeConversationIdRef.current.startsWith("draft-")) {
         loadMessages(activeConversationIdRef.current);
       }
     };
@@ -268,7 +265,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Create New Chat (Local Draft)
   const newChat = () => {
-    const tempId = `conv-${Date.now()}`;
+    const tempId = `draft-${Date.now()}`;
     setActiveConversationId(tempId);
     setActiveSourceFile(null);
     setMessages([]);
@@ -288,7 +285,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     }
 
-    if (!id.startsWith("conv-") && !id.startsWith("temp-")) {
+    if (!id.startsWith("draft-")) {
       try {
         await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`, {
           method: "DELETE",
@@ -303,7 +300,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Instant Optimistic Rename Conversation
   const renameConversation = async (id: string, title: string) => {
     setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, title } : c)));
-    if (!id.startsWith("conv-") && !id.startsWith("temp-")) {
+    if (!id.startsWith("draft-")) {
       try {
         await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}/title`, {
           method: "PATCH",
