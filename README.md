@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Frontend/public/logo.png" width="96" alt="Nexus-RAG Logo" style="border-radius: 20px; box-shadow: 0 8px 32px rgba(225, 220, 201, 0.25);" />
+<img src="Frontend/public/logo.png" width="90" alt="Nexus-RAG Logo" />
 
 # Nexus-RAG
 
