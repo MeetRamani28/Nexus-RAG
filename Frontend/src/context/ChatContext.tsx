@@ -143,7 +143,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Fetch Messages for an active conversation
   const loadMessages = useCallback(
     async (id: string) => {
-      if (!id || id.startsWith("draft-")) {
+      if (!id) {
         setMessages([]);
         setActiveSourceFile(null);
         return;
@@ -154,12 +154,16 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           headers: { "Cache-Control": "no-cache" },
         });
         if (!res.ok) {
+          if (res.status === 404) {
+            setMessages([]);
+            setActiveSourceFile(null);
+          }
           return;
         }
         const data: ConversationDetail = await res.json();
         setActiveSourceFile(data.source_file || null);
         setMessages(
-          data.messages.map((m) => ({
+          (data.messages || []).map((m) => ({
             id: m.id,
             role: m.role as "user" | "assistant",
             content: m.content,
@@ -190,7 +194,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setActiveConversationId(validList[0].id);
           loadMessages(validList[0].id);
         } else if (validList.length === 0 && !activeConversationIdRef.current) {
-          setActiveConversationId(`draft-${Date.now()}`);
+          setActiveConversationId(`conv-${Date.now()}`);
         }
       }
     } catch {
@@ -239,7 +243,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const handleSync = () => {
       refreshConversations();
       refreshDocuments();
-      if (activeConversationIdRef.current && !activeConversationIdRef.current.startsWith("draft-")) {
+      if (activeConversationIdRef.current) {
         loadMessages(activeConversationIdRef.current);
       }
     };
@@ -263,9 +267,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (window.innerWidth < 768) setSidebarOpen(false);
   };
 
-  // Create New Chat (Local Draft)
+  // Create New Chat
   const newChat = () => {
-    const tempId = `draft-${Date.now()}`;
+    const tempId = `conv-${Date.now()}`;
     setActiveConversationId(tempId);
     setActiveSourceFile(null);
     setMessages([]);
@@ -280,36 +284,33 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (activeConversationId === id) {
       if (remaining.length > 0) {
         setActiveConversationId(remaining[0].id);
+        loadMessages(remaining[0].id);
       } else {
         newChat();
       }
     }
 
-    if (!id.startsWith("draft-")) {
-      try {
-        await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`, {
-          method: "DELETE",
-          cache: "no-store",
-        });
-      } catch (err) {
-        console.error("Failed to delete conversation:", err);
-      }
+    try {
+      await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}`, {
+        method: "DELETE",
+        cache: "no-store",
+      });
+    } catch (err) {
+      console.error("Failed to delete conversation:", err);
     }
   };
 
   // Instant Optimistic Rename Conversation
   const renameConversation = async (id: string, title: string) => {
     setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, title } : c)));
-    if (!id.startsWith("draft-")) {
-      try {
-        await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}/title`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title }),
-        });
-      } catch (err) {
-        console.error("Failed to rename conversation:", err);
-      }
+    try {
+      await fetchAuth(`${API_BASE_URL}/api/v1/conversations/${id}/title`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+    } catch (err) {
+      console.error("Failed to rename conversation:", err);
     }
   };
 

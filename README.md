@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Frontend/public/logo.jpg" width="90" style="border-radius: 16px; box-shadow: 0 8px 32px rgba(225, 220, 201, 0.2);" />
+<img src="Frontend/public/logo.png" width="96" alt="Nexus-RAG Logo" style="border-radius: 20px; box-shadow: 0 8px 32px rgba(225, 220, 201, 0.25);" />
 
 # Nexus-RAG
 
@@ -21,21 +21,28 @@
 
 ## 📸 Screenshots & UI Showcase
 
-### 1. Document Intelligence with Verifiable Source Citations
-> High-precision AI response grounded in document context with interactive expandable source drawer showing exact chunk snippets and page numbers.
+### 1. Document Intelligence Session & Instant Ingestion
+> Instant PDF ingestion (<1s) and session initialization with proactive prompt suggestions, vector database status indicators, and active document binding.
 
-![AI Response with Citations](Frontend/public/screenshots/04_ai_response.png)
-
----
-
-### 2. Multi-Document Knowledge Base Management
-> Centralized document repository displaying indexed PDFs, parent chunk counts, and Qdrant vector embeddings with 1-click detachment and deletion.
-
-![Knowledge Base Management](Frontend/public/screenshots/05_knowledge_base.png)
+![Document Intelligence Session Ready](Frontend/public/screenshots/document_session_ready.png)
 
 ---
 
-### 3. Mobile-First Responsive Experience
+### 2. High-Precision Document Synthesis & Streaming RAG
+> Real-time token streaming grounded in indexed document context, complete with syntax-highlighted code blocks, structured markdown formatting, and verifiable attribution.
+
+![RAG Document Synthesis](Frontend/public/screenshots/rag_response_analysis.png)
+
+---
+
+### 3. Dynamic Groq AI Engine Selection
+> On-the-fly model switching between high-performance inference models (Qwen 3.8 27B, GPT Oss 20B, GPT Oss 120B) directly within the query prompt interface.
+
+![Model Selector Engine](Frontend/public/screenshots/multi_model_selection.png)
+
+---
+
+### 4. Mobile-First Responsive Experience
 > Touch-optimized mobile layout with resilient search input, visible conversation actions (rename & delete), and fluid drawer navigation.
 
 | Mobile Chat Interface | Mobile Conversation History |

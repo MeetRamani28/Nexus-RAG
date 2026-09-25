@@ -162,11 +162,12 @@ def get_system_info():
 # ─── Conversations ────────────────────────────────────────────────────────────
 
 @app.get("/api/v1/conversations", response_model=List[ConversationListItem])
-def list_conversations(response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+def list_conversations(request: Request, response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
-    convs = crud.list_conversations(db, user_id)
+    user_email = request.headers.get("x-user-email", "")
+    convs = crud.list_conversations(db, user_id, email=user_email)
     result = []
     for c in convs:
         # Count user questions only so 1 Q&A turn = 1 query
@@ -185,8 +186,11 @@ def list_conversations(response: Response, db: Session = Depends(get_db), user_i
 
 
 @app.post("/api/v1/conversations", response_model=ConversationListItem)
-def create_conversation(payload: ConversationCreate, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+def create_conversation(payload: ConversationCreate, request: Request, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+    user_email = request.headers.get("x-user-email", "")
     conv = crud.create_conversation(db, user_id, title=payload.title or "New Conversation")
+    if user_email:
+        crud.sync_user_email(db, user_id, user_email)
     return ConversationListItem(
         id=conv.id,
         title=conv.title,
@@ -198,11 +202,12 @@ def create_conversation(payload: ConversationCreate, db: Session = Depends(get_d
 
 
 @app.get("/api/v1/conversations/{conversation_id}", response_model=ConversationDetail)
-def get_conversation(conversation_id: str, response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+def get_conversation(conversation_id: str, request: Request, response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
-    conv = crud.get_conversation(db, conversation_id, user_id)
+    user_email = request.headers.get("x-user-email", "")
+    conv = crud.get_conversation(db, conversation_id, user_id, email=user_email)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
     messages = []
@@ -286,17 +291,19 @@ def delete_conversation(conversation_id: str, response: Response, db: Session = 
 # ─── Documents ────────────────────────────────────────────────────────────────
 
 @app.get("/api/v1/documents", response_model=List[IngestedDocumentResponse])
-def list_documents(response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+def list_documents(request: Request, response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
-    return crud.list_ingested_docs(db, user_id)
+    user_email = request.headers.get("x-user-email", "")
+    return crud.list_ingested_docs(db, user_id, email=user_email)
 
 
 @app.delete("/api/v1/documents/{filename:path}")
-def delete_document(filename: str, response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
+def delete_document(filename: str, request: Request, response: Response, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
-    success = crud.delete_ingested_doc(db, filename, user_id)
+    user_email = request.headers.get("x-user-email", "")
+    success = crud.delete_ingested_doc(db, filename, user_id, email=user_email)
     if not success:
         raise HTTPException(status_code=404, detail="Document record not found")
     return {"status": "deleted", "filename": filename}

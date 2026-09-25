@@ -8,14 +8,19 @@ from app.db.models import User, Conversation, Message, IngestedDocument
 # Conversation CRUD
 # ─────────────────────────────────────────────
 
-def get_linked_user_ids(db: Session, user_id: str) -> List[str]:
+def get_linked_user_ids(db: Session, user_id: str, email: Optional[str] = None) -> List[str]:
     """Finds all user_ids associated with the same verified email for cross-device sync."""
     try:
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user or not user.email or "@example.com" in user.email:
+        clean_email = email.strip().lower() if email and "@" in email and "@example.com" not in email else None
+        if not clean_email:
+            user = db.query(User).filter(User.id == user_id).first()
+            if user and user.email and "@example.com" not in user.email:
+                clean_email = user.email.strip().lower()
+        
+        if not clean_email:
             return [user_id]
         
-        all_linked = db.query(User).filter(User.email == user.email.strip().lower()).all()
+        all_linked = db.query(User).filter(User.email == clean_email).all()
         ids = list({u.id for u in all_linked if u.id} | {user_id})
         return ids
     except Exception as e:
@@ -72,13 +77,13 @@ def create_conversation(db: Session, user_id: str, title: str = "New Conversatio
     return conv
 
 
-def get_or_create_conversation(db: Session, conversation_id: str, user_id: str, title: str = "New Conversation") -> Conversation:
-    conv = get_conversation(db, conversation_id, user_id)
+def get_or_create_conversation(db: Session, conversation_id: str, user_id: str, title: str = "New Conversation", email: Optional[str] = None) -> Conversation:
+    conv = get_conversation(db, conversation_id, user_id, email=email)
     if not conv:
         # Check by id alone across linked devices
         conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
     if not conv:
-        ensure_user_exists(db, user_id)
+        ensure_user_exists(db, user_id, email=email)
         conv = Conversation(id=conversation_id, title=title[:150], user_id=user_id)
         db.add(conv)
         db.commit()
@@ -102,8 +107,8 @@ def cleanup_empty_conversations(db: Session, user_id: str):
         db.rollback()
 
 
-def list_conversations(db: Session, user_id: str) -> List[Conversation]:
-    linked_ids = get_linked_user_ids(db, user_id)
+def list_conversations(db: Session, user_id: str, email: Optional[str] = None) -> List[Conversation]:
+    linked_ids = get_linked_user_ids(db, user_id, email=email)
     for uid in linked_ids:
         cleanup_empty_conversations(db, uid)
     return (
@@ -114,18 +119,22 @@ def list_conversations(db: Session, user_id: str) -> List[Conversation]:
     )
 
 
-def get_conversation(db: Session, conversation_id: str, user_id: str) -> Optional[Conversation]:
-    linked_ids = get_linked_user_ids(db, user_id)
+def get_conversation(db: Session, conversation_id: str, user_id: str, email: Optional[str] = None) -> Optional[Conversation]:
+    linked_ids = get_linked_user_ids(db, user_id, email=email)
     conv = db.query(Conversation).filter(Conversation.id == conversation_id, Conversation.user_id.in_(linked_ids)).first()
     if not conv:
         # Cross-device fallback: verify if owner shares same email
         direct_conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
         if direct_conv:
             owner = db.query(User).filter(User.id == direct_conv.user_id).first()
-            current_user = db.query(User).filter(User.id == user_id).first()
+            clean_email = email.strip().lower() if email and "@" in email and "@example.com" not in email else None
+            if not clean_email:
+                current_user = db.query(User).filter(User.id == user_id).first()
+                if current_user and current_user.email and "@example.com" not in current_user.email:
+                    clean_email = current_user.email.strip().lower()
             if (
-                owner and current_user and owner.email and current_user.email
-                and owner.email.lower() == current_user.email.lower()
+                owner and owner.email and clean_email
+                and owner.email.strip().lower() == clean_email
                 and "@example.com" not in owner.email
             ):
                 return direct_conv
@@ -235,13 +244,13 @@ def save_ingested_doc(
     return doc
 
 
-def list_ingested_docs(db: Session, user_id: str) -> List[IngestedDocument]:
-    linked_ids = get_linked_user_ids(db, user_id)
+def list_ingested_docs(db: Session, user_id: str, email: Optional[str] = None) -> List[IngestedDocument]:
+    linked_ids = get_linked_user_ids(db, user_id, email=email)
     return db.query(IngestedDocument).filter(IngestedDocument.user_id.in_(linked_ids)).order_by(IngestedDocument.ingested_at.desc()).all()
 
 
-def delete_ingested_doc(db: Session, filename: str, user_id: str) -> bool:
-    linked_ids = get_linked_user_ids(db, user_id)
+def delete_ingested_doc(db: Session, filename: str, user_id: str, email: Optional[str] = None) -> bool:
+    linked_ids = get_linked_user_ids(db, user_id, email=email)
     doc = db.query(IngestedDocument).filter(IngestedDocument.filename == filename, IngestedDocument.user_id.in_(linked_ids)).first()
     if not doc:
         doc = db.query(IngestedDocument).filter(IngestedDocument.filename == filename).first()
