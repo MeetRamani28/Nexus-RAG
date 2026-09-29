@@ -3,6 +3,7 @@ import re
 import json
 import time
 import asyncio
+import logging
 import tempfile
 import uuid
 from typing import List, Optional
@@ -58,9 +59,43 @@ ingestion_engine = PDFIngestionEngine()
 semantic_cache = RedisSemanticCache()
 
 
+logger = logging.getLogger("nexus-rag")
+
+# ─── Keep-Alive Self-Ping Worker ──────────────────────────────────────────────
+PING_INTERVAL_SECONDS = 600  # 10 minutes — safely under Render's 15-min sleep
+
+async def _keep_alive_worker():
+    """
+    HTTP heartbeat daemon: pings /healthz every 10 minutes so Render free-tier
+    never hits the 15-minute idle sleep timeout.
+    Set BACKEND_URL in Render env vars (e.g. https://nexus-rag.onrender.com).
+    """
+    import httpx
+    backend_url = os.getenv("BACKEND_URL", "").rstrip("/")
+    if not backend_url:
+        logger.warning(
+            "[KeepAlive] BACKEND_URL not set — self-ping disabled. "
+            "Add it in Render → Environment to prevent cold starts."
+        )
+        return
+
+    ping_url = f"{backend_url}/healthz"
+    logger.info(f"[KeepAlive] Heartbeat daemon started → pinging {ping_url} every {PING_INTERVAL_SECONDS}s")
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        while True:
+            await asyncio.sleep(PING_INTERVAL_SECONDS)
+            try:
+                resp = await client.get(ping_url)
+                logger.info(f"[KeepAlive] Ping OK — status={resp.status_code}")
+            except Exception as exc:
+                logger.warning(f"[KeepAlive] Ping failed — {exc}")
+
+
 @app.on_event("startup")
-def on_startup():
+async def on_startup():
     init_db()
+    asyncio.create_task(_keep_alive_worker())
 
 
 # ─── Root ─────────────────────────────────────────────────────────────────────

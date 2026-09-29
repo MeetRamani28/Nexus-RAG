@@ -28,5 +28,6 @@ duckduckgo-search
 numpy
 tenacity
 requests
+httpx
 pytest
 pytest-asyncio

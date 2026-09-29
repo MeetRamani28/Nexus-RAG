@@ -101,6 +101,16 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const userEmailRef = useRef<string | undefined>(undefined);
   userEmailRef.current = user?.primaryEmailAddress?.emailAddress;
 
+  // ─── Keep-Alive: ping /healthz every 10 min to prevent Render cold starts ───
+  useEffect(() => {
+    const PING_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+    const ping = () =>
+      fetch(`${API_BASE_URL}/healthz`, { method: "GET" }).catch(() => {});
+    ping(); // immediate ping on mount
+    const intervalId = setInterval(ping, PING_INTERVAL_MS);
+    return () => clearInterval(intervalId);
+  }, []);
+
   // Authenticated Fetch wrapper attaching user email and token for cross-device sync
   const fetchAuth = useCallback(
     async (url: string, options: RequestInit = {}) => {
