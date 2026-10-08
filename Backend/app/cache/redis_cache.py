@@ -29,6 +29,10 @@ class RedisSemanticCache:
     Key pattern: `nexus_cache:{user_id}:{doc_id}:{hash}`
     """
 
+    # Hard cap on in-memory fallback to prevent OOM on Render free-tier (512MB RAM)
+    MAX_IN_MEMORY_ENTRIES = 500
+    EVICT_BATCH_SIZE = 50  # evict oldest 50 keys (10%) when cap is exceeded
+
     def __init__(self, redis_url: str = None, similarity_threshold: float = None):
         self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
         if similarity_threshold is not None:
@@ -37,8 +41,16 @@ class RedisSemanticCache:
             self.similarity_threshold = float(os.getenv("REDIS_CACHE_SIMILARITY_THRESHOLD", "0.95"))
         self.embeddings = get_embeddings()
         self.client = None
-        self._in_memory_cache = {}  # Fallback
+        self._in_memory_cache: Dict[str, Any] = {}  # Fallback — capped at MAX_IN_MEMORY_ENTRIES
         self._connect()
+
+    def _evict_in_memory_if_needed(self) -> None:
+        """Evict oldest EVICT_BATCH_SIZE entries when in-memory cache exceeds MAX_IN_MEMORY_ENTRIES."""
+        if len(self._in_memory_cache) >= self.MAX_IN_MEMORY_ENTRIES:
+            keys_to_evict = list(self._in_memory_cache.keys())[:self.EVICT_BATCH_SIZE]
+            for k in keys_to_evict:
+                del self._in_memory_cache[k]
+            print(f"[InMemory Cache]: Evicted {len(keys_to_evict)} entries (cap={self.MAX_IN_MEMORY_ENTRIES}).")
 
     def _connect(self):
         """Establishes connection to Redis server."""
@@ -160,6 +172,7 @@ class RedisSemanticCache:
             if self.client:
                 self.client.set(cache_id, json.dumps(payload), ex=ttl_seconds)
             else:
+                self._evict_in_memory_if_needed()  # cap at MAX_IN_MEMORY_ENTRIES before write
                 self._in_memory_cache[cache_id] = payload
             print(f"[Semantic Cache SET]: Cached response for User '{safe_user}' Doc '{safe_doc}' Key '{cache_id}'")
         except Exception as e:
