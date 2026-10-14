@@ -205,13 +205,17 @@ export const ChatInterface: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!input.trim()) return;
     sendMessage(input);
+    setInput("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      if (!input.trim()) return;
       sendMessage(input);
+      setInput("");
     }
   };
 
